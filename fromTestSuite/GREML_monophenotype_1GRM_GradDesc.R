@@ -10,6 +10,7 @@
 
 
 require(OpenMx)
+mxOption(NULL,"Default optimizer","SLSQP")
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
 require(mvtnorm)
 
