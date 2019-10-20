@@ -40,12 +40,10 @@ gff <- mxFitFunctionGREML(dV=c(va="A",ve="I"))
 #can use analytic first and second derivatives of the GREML fitfunction to speed up convergence.  It looks
 #especially messy here because we want a profile-likelihood confidence interval for the heritability:
 plan <- mxComputeSequence(steps=list(
-	mxComputeNewtonRaphson(fitfunction="fitfunction"),
-	mxComputeOnce('fitfunction', c('fit','gradient','hessian','ihessian')),
+	mxComputeNewtonRaphson(),
+	mxComputeOnce('fitfunction', c('fit','gradient','hessian')),
 	mxComputeConfidenceInterval(
-		plan=mxComputeGradientDescent(
-			fitfunction="GREML_1GRM_1trait.fitfunction", nudgeZeroStarts=FALSE, maxMajorIter=150),
-		fitfunction="GREML_1GRM_1trait.fitfunction"),
+		plan=mxComputeGradientDescent(nudgeZeroStarts=FALSE, maxMajorIter=150)),
 	mxComputeStandardError(),
 	mxComputeReportDeriv(),
 	mxComputeReportExpectation()
@@ -118,8 +116,8 @@ testmod2 <- mxModel(
 	gff,
 	#We'll do without the CI this time:
 	mxComputeSequence(steps=list(
-		mxComputeNewtonRaphson(fitfunction="fitfunction"),
-		mxComputeOnce('fitfunction', c('fit','gradient','hessian','ihessian')),
+		mxComputeNewtonRaphson(),
+		mxComputeOnce('fitfunction', c('fit','gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeReportDeriv(),
 		mxComputeReportExpectation()
@@ -136,12 +134,10 @@ mxEval(h2,testrun2,T)
 gff3 <- mxFitFunctionGREML(dV=c(h2="dVdH2",vp="dVdVp")) #<--Need new fitfunction object
 #Need new compute plan:
 plan3 <- mxComputeSequence(steps=list(
-	mxComputeNewtonRaphson(fitfunction="fitfunction"),
-	mxComputeOnce('fitfunction', c('fit','gradient','hessian','ihessian')),
+	mxComputeNewtonRaphson(),
+	mxComputeOnce('fitfunction', c('fit','gradient','hessian')),
 	mxComputeConfidenceInterval(
-		plan=mxComputeGradientDescent(
-			fitfunction="GREML_1GRM_1trait_altparam.fitfunction", nudgeZeroStarts=FALSE, maxMajorIter=150),
-		fitfunction="GREML_1GRM_1trait_altparam.fitfunction"),
+		plan=mxComputeGradientDescent(nudgeZeroStarts=FALSE, maxMajorIter=150)),
 	mxComputeStandardError(),
 	mxComputeReportDeriv(),
 	mxComputeReportExpectation()
