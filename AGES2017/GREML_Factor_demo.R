@@ -115,7 +115,7 @@ gff <- mxFitFunctionGREML(dV=c(l1="dV_dl1",l2="dV_dl2",l3="dV_dl3",va="dV_dva",v
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
-		mxComputeOnce('fitfunction', c('fit','gradient','hessian')),
+		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
 		mxComputeReportDeriv(),
@@ -231,10 +231,10 @@ if(factorRun$output$status$code > 1){
 	#to use the analytic gradient, and also relaxing its optimality tolerance.  All of this will help it reach a 
 	#solution more quickly:
 	factorRun$compute <- mxComputeSequence(
-		freeSet = c("Va","Lambda","Vu"), steps=list(
+		steps=list(
 			mxComputeGradientDescent(engine = "NPSOL", useGradient = T, verbose=5, tolerance=1e-7,
 															 warmStart = ws),
-			mxComputeOnce('fitfunction', c('fit','gradient','hessian','ihessian')),
+			mxComputeOnce('fitfunction', c('gradient','hessian')),
 			mxComputeStandardError(),
 			mxComputeReportDeriv(),
 			mxComputeReportExpectation()

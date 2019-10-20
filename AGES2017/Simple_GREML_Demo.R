@@ -112,7 +112,7 @@ plan <- mxComputeSequence(
 	#display what it's doing in real time (via the verbose argument):
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
-		mxComputeOnce("fitfunction", c("fit","gradient","hessian")),
+		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
 		mxComputeReportDeriv(),
