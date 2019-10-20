@@ -155,30 +155,8 @@ xpec <- mxExpectationGREML(V="V",yvars=c("y1","y2","y3","y4","y5"),Xvars=list(c(
 #As an example, the following would regress y1 and y2 onto x1 and x2, regress y3 onto x1, regress y4 onto x2, and include no covariates for y5:
 # xpec <- mxExpectationGREML(V="V",yvars=c("y1","y2","y3","y4","y5"),Xvars=list(c("x1","x2"),c("x1","x2"),"x1","x2",character(0)))
 
-#Three possible custom computes plans: ###
-#plan1 uses the Newton-Raphson optimizer.  Of the 3, it is the fastest but most fragile:
-plan1 <- mxComputeSequence(
-	steps=list(
-		mxComputeNewtonRaphson(verbose=5L),
-		mxComputeOnce("fitfunction", c("gradient","hessian")),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-#plan2 uses NPSOL, with analytic gradients and an internally calculated "warm start" (preconditioner matrix).  It's what is used in this script:
-plan2 <- mxComputeSequence(
-	steps=list(
-		mxComputeOnce("fitfunction", c("hessian")),
-		mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L,tolerance=1e-7),
-		mxComputeOnce("fitfunction", c("gradient","hessian")),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-#plan3 uses NPSOL, with analytic gradients but no warm start.  Of the 3, it is the slowest but most robust:
-plan3 <- mxComputeSequence(
+#Custom compute plan to use NPSOL, with analytic gradients but no warm start:
+plan <- mxComputeSequence(
 	steps=list(
 		mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L,tolerance=1e-7),
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
@@ -191,7 +169,7 @@ plan3 <- mxComputeSequence(
 cpmod <- mxModel(
 	"CommonPathway",
 	xpec,
-	plan1,
+	plan,
 	#sort=FALSE is CRITICALLY IMPORTANT!  It turns off OpenMx's automatic sorting of data rows.
 	#We don't want to rearrange the rows, because they are already aligned with the rows and columns of the GRM:
 	mxData(observed=widedata,type="raw",sort=FALSE),
@@ -356,6 +334,7 @@ rm(GRM); gc()
 #after the call to mxRun() is complete:
 cpmod <- mxRun(cpmod)
 summary(cpmod,verbose=T)
+coef(cpmod); truevals
 cpmod$output$fit
 cpmod$output$gradient
 cpmod$output$hessian
