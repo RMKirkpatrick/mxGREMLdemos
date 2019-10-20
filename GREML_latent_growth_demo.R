@@ -126,7 +126,7 @@ xpec <- mxExpectationGREML(
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
-		mxComputeOnce("fitfunction", c("fit","gradient","hessian")),
+		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
 		mxComputeReportDeriv(),
@@ -454,7 +454,7 @@ if( !(gremlmod$output$status$code %in% c(0,1)) ){
 	if("try-error" %in% class(ws)){ws <- NULL}
 	gremlmod$compute <- mxComputeSequence(steps=list(
 		mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L,warmStart=ws,tolerance=1e-7),
-		mxComputeOnce('fitfunction', c('fit','gradient','hessian')),
+		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
 		mxComputeReportDeriv(),
@@ -468,7 +468,7 @@ if( !(gremlmod$output$status$code %in% c(0,1)) ){
 if( !(gremlmod$output$status$code %in% c(0,1)) ){
 	gremlmod$compute <- mxComputeSequence(steps=list(
 		mxComputeGradientDescent(engine="SLSQP",useGradient=T,verbose=5L,tolerance=1e-7),
-		mxComputeOnce('fitfunction', c('fit','gradient','hessian')),
+		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
 		mxComputeReportDeriv(),

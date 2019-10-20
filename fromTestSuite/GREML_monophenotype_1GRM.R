@@ -41,7 +41,7 @@ gff <- mxFitFunctionGREML(dV=c(va="A",ve="I"))
 #especially messy here because we want a profile-likelihood confidence interval for the heritability:
 plan <- mxComputeSequence(steps=list(
 	mxComputeNewtonRaphson(),
-	mxComputeOnce('fitfunction', c('fit','gradient','hessian')),
+	mxComputeOnce('fitfunction', c('gradient','hessian')),
 	mxComputeConfidenceInterval(
 		plan=mxComputeGradientDescent(nudgeZeroStarts=FALSE, maxMajorIter=150)),
 	mxComputeStandardError(),
@@ -117,7 +117,7 @@ testmod2 <- mxModel(
 	#We'll do without the CI this time:
 	mxComputeSequence(steps=list(
 		mxComputeNewtonRaphson(),
-		mxComputeOnce('fitfunction', c('fit','gradient','hessian')),
+		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeReportDeriv(),
 		mxComputeReportExpectation()
@@ -135,7 +135,7 @@ gff3 <- mxFitFunctionGREML(dV=c(h2="dVdH2",vp="dVdVp")) #<--Need new fitfunction
 #Need new compute plan:
 plan3 <- mxComputeSequence(steps=list(
 	mxComputeNewtonRaphson(),
-	mxComputeOnce('fitfunction', c('fit','gradient','hessian')),
+	mxComputeOnce('fitfunction', c('gradient','hessian')),
 	mxComputeConfidenceInterval(
 		plan=mxComputeGradientDescent(nudgeZeroStarts=FALSE, maxMajorIter=150)),
 	mxComputeStandardError(),
