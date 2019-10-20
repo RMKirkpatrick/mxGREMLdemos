@@ -271,6 +271,7 @@ gremlmod <- mxModel(
 	#Let's request CIs for the latent-scale parameters:
 	mxCI(c("y1_h2lat","y2_h2lat","ra"))
 )
+rm(gremldat, GRM, widedata); gc()
 gremlmod <- mxRun(gremlmod)
 gc()
 summary(gremlmod, verbose=T)
