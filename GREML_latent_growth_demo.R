@@ -28,16 +28,8 @@ truevals <- c(
 	ves=0.5, #<--Nonshared-environmental variance in slope
 	ca=-0.15, #<--Additive-genetic covariance between intercept and slope
 	ce=-0.12, #<--Nonshared-environmental covariance between intercept and slope
-	va1=1.0, #<--Additive-genetic uniqueness of phenotype #1
-	va2=1.0, #<--Additive-genetic uniqueness of phenotype #2
-	va3=1.0, #<--Additive-genetic uniqueness of phenotype #3
-	va4=1.0, #<--Additive-genetic uniqueness of phenotype #4
-	va5=1.0, #<--Additive-genetic uniqueness of phenotype #5
-	ve1=1.0, #<--Nonshared-environmental uniqueness of phenotype #1
-	ve2=1.0, #<--Nonshared-environmental uniqueness of phenotype #2
-	ve3=1.0, #<--Nonshared-environmental uniqueness of phenotype #3
-	ve4=1.0, #<--Nonshared-environmental uniqueness of phenotype #4
-	ve5=1.0, #<--Nonshared-environmental uniqueness of phenotype #5
+	vau=1.0, #<--Additive-genetic uniqueness
+	veu=1.0, #<--Nonshared-environmental uniqueness
 	ALmean=3.25, #<--Mean heritable latent intercept
 	ASmean=0.25, #<--Mean heritable latent slope
 	ELmean=3.25, #<--Mean environmental latent intercept
@@ -87,16 +79,16 @@ ALAS <- rmvnorm(1, mean=c(rep(truevals["ALmean"],N),rep(truevals["ASmean"],N)), 
 ELES <- rmvnorm(1, mean=c(rep(truevals["ELmean"],N),rep(truevals["ESmean"],N)), sigma=varFE)
 
 #Phenotypes:
-y1 <- ALAS[1:N] + ELES[1:N] + (ALAS[(N+1):(2*N)]+ELES[(N+1):(2*N)])*age1 + rmvnorm(1, mean=rep(0,N), sigma=GRM*truevals["va1"]) + 
-	rnorm(N,mean=0,sd=sqrt(truevals["ve1"]))
-y2 <- ALAS[1:N] + ELES[1:N] + (ALAS[(N+1):(2*N)]+ELES[(N+1):(2*N)])*age2 + rmvnorm(1, mean=rep(0,N), sigma=GRM*truevals["va2"]) + 
-	rnorm(N,mean=0,sd=sqrt(truevals["ve2"]))
-y3 <- ALAS[1:N] + ELES[1:N] + (ALAS[(N+1):(2*N)]+ELES[(N+1):(2*N)])*age3 + rmvnorm(1, mean=rep(0,N), sigma=GRM*truevals["va3"]) + 
-	rnorm(N,mean=0,sd=sqrt(truevals["ve3"]))
-y4 <- ALAS[1:N] + ELES[1:N] + (ALAS[(N+1):(2*N)]+ELES[(N+1):(2*N)])*age4 + rmvnorm(1, mean=rep(0,N), sigma=GRM*truevals["va4"]) + 
-	rnorm(N,mean=0,sd=sqrt(truevals["ve4"]))
-y5 <- ALAS[1:N] + ELES[1:N] + (ALAS[(N+1):(2*N)]+ELES[(N+1):(2*N)])*age5 + rmvnorm(1, mean=rep(0,N), sigma=GRM*truevals["va5"]) + 
-	rnorm(N,mean=0,sd=sqrt(truevals["ve5"]))
+y1 <- ALAS[1:N] + ELES[1:N] + (ALAS[(N+1):(2*N)]+ELES[(N+1):(2*N)])*age1 + rmvnorm(1, mean=rep(0,N), sigma=GRM*truevals["vau"]) + 
+	rnorm(N,mean=0,sd=sqrt(truevals["veu"]))
+y2 <- ALAS[1:N] + ELES[1:N] + (ALAS[(N+1):(2*N)]+ELES[(N+1):(2*N)])*age2 + rmvnorm(1, mean=rep(0,N), sigma=GRM*truevals["vau"]) + 
+	rnorm(N,mean=0,sd=sqrt(truevals["veu"]))
+y3 <- ALAS[1:N] + ELES[1:N] + (ALAS[(N+1):(2*N)]+ELES[(N+1):(2*N)])*age3 + rmvnorm(1, mean=rep(0,N), sigma=GRM*truevals["vau"]) + 
+	rnorm(N,mean=0,sd=sqrt(truevals["veu"]))
+y4 <- ALAS[1:N] + ELES[1:N] + (ALAS[(N+1):(2*N)]+ELES[(N+1):(2*N)])*age4 + rmvnorm(1, mean=rep(0,N), sigma=GRM*truevals["vau"]) + 
+	rnorm(N,mean=0,sd=sqrt(truevals["veu"]))
+y5 <- ALAS[1:N] + ELES[1:N] + (ALAS[(N+1):(2*N)]+ELES[(N+1):(2*N)])*age5 + rmvnorm(1, mean=rep(0,N), sigma=GRM*truevals["vau"]) + 
+	rnorm(N,mean=0,sd=sqrt(truevals["veu"]))
 # Finished generating data ###
 
 
@@ -106,6 +98,7 @@ age.all <- c(age1,age2,age3,age4,age5)
 id <- as.factor(rep(1:N,5))
 remlmod <- lmer(y.all~1+age.all + (1+age.all|id))
 ( remlsumm <- summary(remlmod))
+truevals
 
 #Create wide data object:
 widedata <- cbind(
@@ -122,19 +115,22 @@ xpec <- mxExpectationGREML(
 	Xvars=list("age1","age2","age3","age4","age5"), 
 	staggerZeroes=FALSE)
 
+# #Options for verifying analytic derivatives with NPSOL:
+# mxOption(NULL,"Print level",20)
+# mxOption(NULL,"Print file",1)
+# mxOption(NULL,"Verify level",3)
+
 #Custom compute plan:
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
+		#mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L,tolerance=1e-7),
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
 		mxComputeReportDeriv(),
 		mxComputeReportExpectation()
 	))
-
-I <- diag(N)
-Z <- matrix(0,N,N)
 
 gremlmod <- mxModel(
 	"LatentGrowth",
@@ -155,27 +151,19 @@ gremlmod <- mxModel(
 	mxMatrix(type="Full", nrow=1, ncol=1, free=T, values=0.5*VarCorr(remlmod)[[1]][1,2], labels="ce", name="Ce"),
 	
 	#Matrices to hold unique-variance components; each is initialized at one-half the non-biometric REML residual variance:
-	mxMatrix(type="Full",nrow=1,ncol=1,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="va1",name="Va1"),
-	mxMatrix(type="Full",nrow=1,ncol=1,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="va2",name="Va2"),
-	mxMatrix(type="Full",nrow=1,ncol=1,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="va3",name="Va3"),
-	mxMatrix(type="Full",nrow=1,ncol=1,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="va4",name="Va4"),
-	mxMatrix(type="Full",nrow=1,ncol=1,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="va5",name="Va5"),
-	#Note the diagonal matrices:
-	mxMatrix(type="Diag",nrow=N,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="ve1",lbound=0.0001,name="Ve1"),
-	mxMatrix(type="Diag",nrow=N,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="ve2",lbound=0.0001,name="Ve2"),
-	mxMatrix(type="Diag",nrow=N,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="ve3",lbound=0.0001,name="Ve3"),
-	mxMatrix(type="Diag",nrow=N,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="ve4",lbound=0.0001,name="Ve4"),
-	mxMatrix(type="Diag",nrow=N,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="ve5",lbound=0.0001,name="Ve5"),
+	mxMatrix(type="Full",nrow=1,ncol=1,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="vau",name="Vau"),
+	#Note the diagonal matrix:
+	mxMatrix(type="Diag",nrow=N,free=T,values=0.5*attr(VarCorr(remlmod),"sc"),labels="veu",lbound=0.0001,name="Veu"),
 	
 	#GRM:
 	mxMatrix(type="Symm",nrow=N,ncol=N,free=F,values=GRM,name="A"),
 	
-	# #Column vectors of ages:
-	# mxMatrix(type="Full",nrow=N,ncol=1,free=F,values=age1,name="Age1"),
-	# mxMatrix(type="Full",nrow=N,ncol=1,free=F,values=age2,name="Age2"),
-	# mxMatrix(type="Full",nrow=N,ncol=1,free=F,values=age3,name="Age3"),
-	# mxMatrix(type="Full",nrow=N,ncol=1,free=F,values=age4,name="Age4"),
-	# mxMatrix(type="Full",nrow=N,ncol=1,free=F,values=age5,name="Age5"),
+	#Column vectors of ages:
+	mxMatrix(type="Full",nrow=N,ncol=1,free=F,values=age1,name="Age1"),
+	mxMatrix(type="Full",nrow=N,ncol=1,free=F,values=age2,name="Age2"),
+	mxMatrix(type="Full",nrow=N,ncol=1,free=F,values=age3,name="Age3"),
+	mxMatrix(type="Full",nrow=N,ncol=1,free=F,values=age4,name="Age4"),
+	mxMatrix(type="Full",nrow=N,ncol=1,free=F,values=age5,name="Age5"),
 	
 	#Identity matrix:
 	mxMatrix(type="Iden",nrow=N,name="I"),
@@ -220,16 +208,13 @@ gremlmod <- mxModel(
 	mxMatrix(type="Full", nrow=N, ncol=N, free=F, values=diag(age5)%*%GRM + GRM%*%diag(age4), name="dV_dca_54"),
 	mxMatrix(type="Full", nrow=N, ncol=N, free=F, values=diag(age5)%*%GRM + GRM%*%diag(age5), name="dV_dca_55"),
 	
-	#Blocks (submatrices) of the derivatives of V w/r/t nonshared environmental variance in slope:
-	
-	
 	#Model-expected covariance matrix, V, specified blockwise.  Notice that blocks entirely above the diagonal can be left as zero;
 	#the mxGREML backend ignores the values of elements above the diagonal of V and its derivatives:
 	mxAlgebra(rbind(
 		cbind(
 			#Block 1,1:
 			AvalPlusVel + dV_dvas_11%x%vas + vec2diag((Age1*Age1)%x%Ves) + vec2diag((Age1+Age1)%x%(Ce)) + dV_dca_11%x%Ca + 
-				A%x%Va1 + Ve1,
+				A%x%Vau + Veu,
 			#Block 1,2 thru 1,5:
 			Zip,Zip,Zip,Zip),
 		cbind(
@@ -237,7 +222,7 @@ gremlmod <- mxModel(
 			AvalPlusVel + dV_dvas_21%x%vas + vec2diag((Age2*Age1)%x%Ves) + vec2diag((Age2+Age1)%x%(Ce)) + dV_dca_21%x%Ca,
 			#Block 2,2:
 			AvalPlusVel + dV_dvas_22%x%vas + vec2diag((Age2*Age2)%x%Ves) + vec2diag((Age2+Age2)%x%(Ce)) + dV_dca_22%x%Ca + 
-				A%x%Va2 + Ve2,
+				A%x%Vau + Veu,
 			#Block 2,3 thru 2,5:
 			Zip, Zip, Zip),
 		cbind(
@@ -247,7 +232,7 @@ gremlmod <- mxModel(
 			AvalPlusVel + dV_dvas_32%x%vas + vec2diag((Age3*Age2)%x%Ves) + vec2diag((Age3+Age2)%x%(Ce)) + dV_dca_32%x%Ca,
 			#Block 3,3:
 			AvalPlusVel + dV_dvas_33%x%vas + vec2diag((Age3*Age3)%x%Ves) + vec2diag((Age3+Age3)%x%(Ce)) + dV_dca_33%x%Ca + 
-				A%x%Va3 + Ve3,
+				A%x%Vau + Veu,
 			#Block 3,4 & 3,5:
 			Zip, Zip),
 		cbind(
@@ -259,7 +244,7 @@ gremlmod <- mxModel(
 			AvalPlusVel + dV_dvas_43%x%vas + vec2diag((Age4*Age3)%x%Ves) + vec2diag((Age4+Age3)%x%(Ce)) + dV_dca_43%x%Ca,
 			#Block 4,4:
 			AvalPlusVel + dV_dvas_44%x%vas + vec2diag((Age4*Age4)%x%Ves) + vec2diag((Age4+Age4)%x%(Ce)) + dV_dca_44%x%Ca + 
-				A%x%Va4 + Ve4,
+				A%x%Vau + Veu,
 			#Block 4,5:
 			Zip),
 		cbind(
@@ -273,7 +258,7 @@ gremlmod <- mxModel(
 			AvalPlusVel + dV_dvas_54%x%vas + vec2diag((Age5*Age4)%x%Ves) + vec2diag((Age5+Age4)%x%(Ce)) + dV_dca_54%x%Ca,
 			#Block 5,5:
 			AvalPlusVel + dV_dvas_55%x%vas + vec2diag((Age5*Age5)%x%Ves) + vec2diag((Age5+Age5)%x%(Ce)) + dV_dca_55%x%Ca + 
-				A%x%Va5 + Ve5)
+				A%x%Vau + Veu)
 	), name="V"),
 	
 	#Derivative of V w/r/t additive-genetic variance in intercept:
@@ -334,110 +319,29 @@ gremlmod <- mxModel(
 		cbind(vec2diag(Age5+Age1), vec2diag(Age5+Age2), vec2diag(Age5+Age3), vec2diag(Age5+Age4), vec2diag(Age5+Age5))
 	), name="dV_dce"),
 	
-	#Derivative of V w/r/t additive-genetic unique variance for wave 1:
+	#Derivative of V w/r/t additive-genetic unique variance:
 	mxAlgebra(
 		rbind(
 			cbind(A,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip)
-		), name="dV_dva1"),
-	
-	#Derivative of V w/r/t additive-genetic unique variance for wave 2:
-	mxAlgebra(
-		rbind(
-			cbind(Zip,Zip,Zip,Zip,Zip),
 			cbind(Zip,A,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip)
-		), name="dV_dva2"),
-	
-	#Derivative of V w/r/t additive-genetic unique variance for wave 3:
-	mxAlgebra(
-		rbind(
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
 			cbind(Zip,Zip,A,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip)
-		), name="dV_dva3"),
-	
-	#Derivative of V w/r/t additive-genetic unique variance for wave 4:
-	mxAlgebra(
-		rbind(
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
 			cbind(Zip,Zip,Zip,A,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip)
-		), name="dV_dva4"),
-	
-	#Derivative of V w/r/t additive-genetic unique variance for wave 5:
-	mxAlgebra(
-		rbind(
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
 			cbind(Zip,Zip,Zip,Zip,A)
-		), name="dV_dva5"),
+		), name="dV_dvau"),
 	
-	#Derivative of V w/r/t nonshared-environmental unique variance for wave 1:
+	#Derivative of V w/r/t nonshared-environmental unique variance:
 	mxAlgebra(
 		rbind(
 			cbind(I,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip)
-		), name="dV_dve1"),
-	
-	#Derivative of V w/r/t nonshared-environmental unique variance for wave 2:
-	mxAlgebra(
-		rbind(
-			cbind(Zip,Zip,Zip,Zip,Zip),
 			cbind(Zip,I,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip)
-		), name="dV_dve2"),
-	
-	#Derivative of V w/r/t nonshared-environmental unique variance for wave 3:
-	mxAlgebra(
-		rbind(
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
 			cbind(Zip,Zip,I,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip)
-		), name="dV_dve3"),
-	
-	#Derivative of V w/r/t nonshared-environmental unique variance for wave 4:
-	mxAlgebra(
-		rbind(
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
 			cbind(Zip,Zip,Zip,I,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip)
-		), name="dV_dve4"),
-	
-	#Derivative of V w/r/t nonshared-environmental unique variance for wave 5:
-	mxAlgebra(
-		rbind(
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
-			cbind(Zip,Zip,Zip,Zip,Zip),
 			cbind(Zip,Zip,Zip,Zip,I)
-		), name="dV_dve5"),
+		), name="dV_dveu"),
 	
 	#GREML fitfunction object:
 	mxFitFunctionGREML(dV=c(
-		val="dV_dval",vel="dV_dvel",vas="dV_dvas",ves="dV_dves",ca="dV_dca",ce="dV_dce",va1="dV_dva1",va2="dV_dva2",va3="dV_dva3",
-		va4="dV_dva4",va5="dV_dva5",ve1="dV_dve1",ve2="dV_dve2",ve3="dV_dve3",ve4="dV_dve4",ve5="dV_dve5"))
+		val="dV_dval",vel="dV_dvel",vas="dV_dvas",ves="dV_dves",ca="dV_dca",ce="dV_dce",vau="dV_dvau",veu="dV_dveu"))
 )
 
 #Remove unneeded objects:
@@ -448,26 +352,10 @@ rm(widedata,GRM); gc()
 gremlmod <- mxRun(gremlmod)
 gc()
 
-#If Newton-Raphson doesn't reach a good solution, try again with (possibly warm-started) NPSOL :
-if( !(gremlmod$output$status$code %in% c(0,1)) ){
-	ws <- try(chol(gremlmod$output$hessian))
-	if("try-error" %in% class(ws)){ws <- NULL}
-	gremlmod$compute <- mxComputeSequence(steps=list(
-		mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L,warmStart=ws,tolerance=1e-7),
-		mxComputeOnce('fitfunction', c('gradient','hessian')),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-	gremlmod <- mxRun(gremlmod)
-	gc()
-}
-
-#If NPSOL doesn't reach a good solution, try again with SLSQP:
+#If Newton-Raphson doesn't reach a good solution, try again with SLSQP:
 if( !(gremlmod$output$status$code %in% c(0,1)) ){
 	gremlmod$compute <- mxComputeSequence(steps=list(
-		mxComputeGradientDescent(engine="SLSQP",useGradient=T,verbose=5L,tolerance=1e-7),
+		mxComputeGradientDescent(engine="SLSQP",useGradient=T,verbose=5L),
 		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
@@ -479,6 +367,7 @@ if( !(gremlmod$output$status$code %in% c(0,1)) ){
 }
 
 summary(gremlmod, verbose=T)
+truevals
 gremlmod$output$fit
 gremlmod$output$gradient
 gremlmod$output$hessian
