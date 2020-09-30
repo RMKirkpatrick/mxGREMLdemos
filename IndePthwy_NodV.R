@@ -199,6 +199,7 @@ rm(GRM); gc()
 #Clobbering the unfitted MxModel with the fitted MxModel object will NOT reduce peak memory demand, but it will allow R to free more memory
 #after the call to mxRun() is complete:
 ipmod <- mxRun(ipmod)
+object.size(ipmod) #<--How much memory does the fitted MxModel take up?:
 summary(ipmod,verbose=T)
 coef(ipmod); truevals
 ipmod$output$fit
