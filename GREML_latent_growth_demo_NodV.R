@@ -261,6 +261,7 @@ rm(widedata,GRM,age1,age2,age3,age4,age5); gc()
 #after the call to mxRun() is complete:
 gremlmod <- mxRun(gremlmod)
 gc()
+object.size(gremlmod) #<--How much memory does the fitted MxModel take up?:
 
 summary(gremlmod, verbose=T)
 truevals

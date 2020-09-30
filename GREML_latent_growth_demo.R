@@ -351,6 +351,7 @@ rm(widedata,GRM); gc()
 #after the call to mxRun() is complete:
 gremlmod <- mxRun(gremlmod)
 gc()
+object.size(gremlmod) #<--How much memory does the fitted MxModel take up?:
 
 #If Newton-Raphson doesn't reach a good solution, try again with SLSQP:
 if( !(gremlmod$output$status$code %in% c(0,1)) ){

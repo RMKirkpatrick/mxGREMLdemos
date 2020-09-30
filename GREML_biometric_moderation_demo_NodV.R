@@ -104,5 +104,6 @@ gremlmod <- mxModel(
 rm(Gamma,GammaGRM,GRM,K1,K2,Lambda,LambdaGRM); gc()
 gremlmod <- mxRun(gremlmod)
 gc()
+object.size(gremlmod) #<--How much memory does the fitted MxModel take up?:
 
 summary(gremlmod,verbose=T)

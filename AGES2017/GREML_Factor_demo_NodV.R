@@ -148,6 +148,7 @@ gc()
 
 #Run and view summary:
 factorRun <- mxRun(factorMod)
+object.size(factorRun) #<--How much memory does the fitted MxModel take up?:
 summary(factorRun)
 
 

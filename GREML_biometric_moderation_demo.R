@@ -128,6 +128,7 @@ gremlmod <- mxModel(
 rm(Gamma,GammaGRM,GRM,K1,K2,Lambda,LambdaGRM,plan); gc()
 gremlmod <- mxRun(gremlmod)
 gc()
+object.size(gremlmod) #<--How much memory does the fitted MxModel take up?:
 
 #If Newton-Raphson doesn't reach a good solution, try again with (possibly warm-started) NPSOL :
 if( !(gremlmod$output$status$code %in% c(0,1)) ){
