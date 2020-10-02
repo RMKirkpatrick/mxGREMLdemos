@@ -9,7 +9,7 @@ library(mvtnorm)
 library(Matrix)
 library(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)
-mxOption(NULL,"Default optimizer","SLSQP")
+mxOption(NULL,"Default optimizer","NPSOL")
 mxOption(NULL,"Analytic Gradients","Yes")
 
 #With more threads, the job will run more quickly, but will require more memory:
@@ -158,7 +158,8 @@ xpec <- mxExpectationGREML(V="V",yvars=c("y1","y2","y3","y4"),Xvars=list(c("x1",
 #Custom compute plan:
 plan <- mxComputeSequence(
 	steps=list(
-		mxComputeGradientDescent(engine="SLSQP",useGradient=T,verbose=5L),
+		mxComputeNewtonRaphson(verbose=5L),
+		#mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L),
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
@@ -319,6 +320,21 @@ rm(GRM); gc()
 #Clobbering the unfitted MxModel with the fitted MxModel object will NOT reduce peak memory demand, but it will allow R to free more memory
 #after the call to mxRun() is complete:
 ipmod <- mxRun(ipmod)
+
+if(ipmod$output$status$code > 1){
+	ipmod$compute <- mxComputeSequence(
+		steps=list(
+			mxComputeGradientDescent(engine="SLSQP", useGradient=F, verbose=5L),
+			mxComputeNumericDeriv(),
+			mxComputeStandardError(),
+			mxComputeHessianQuality(),
+			mxComputeReportDeriv(),
+			mxComputeReportExpectation()
+		))
+	ipmod <- mxRun(ipmod)
+}
+
+
 object.size(ipmod) #<--How much memory does the fitted MxModel take up?:
 summary(ipmod,verbose=T)
 coef(ipmod); truevals
