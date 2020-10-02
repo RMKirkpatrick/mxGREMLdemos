@@ -158,7 +158,7 @@ factorMod <- mxModel(
 	#The model-expected covariance matrix, per the Fundamental Theorem of Factor Analysis:
 	mxAlgebra(LamLamT%x%SigmaFac + vec2diag(Vu), name="V"),
 	#First partial derivative of V w/r/t va:
-	mxAlgebra(LamLamT%x%A, name="dV_dva"),
+	mxAlgebra(LamLamT%x%(A-I), name="dV_dva"),
 	#First partial derivative of V w/r/t vu1:
 	mxAlgebra(rbind(
 		cbind(I,Zip,Zip),
