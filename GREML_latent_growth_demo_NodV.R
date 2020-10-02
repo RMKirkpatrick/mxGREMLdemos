@@ -120,7 +120,6 @@ xpec <- mxExpectationGREML(
 gremlmod <- mxModel(
 	"LatentGrowth",
 	xpec, #<--Expectation
-	plan, #<--Compute plan
 	#sort=FALSE is CRITICALLY IMPORTANT!  It turns off OpenMx's automatic sorting of data rows.
 	#We don't want to rearrange the rows, because they are already aligned with the rows and columns of the GRM:
 	mxData(observed=widedata,type="raw",sort=FALSE),
