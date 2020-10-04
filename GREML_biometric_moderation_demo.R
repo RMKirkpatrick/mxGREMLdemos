@@ -1,6 +1,12 @@
 # Copyright 2019-2020 by Robert M. Kirkpatrick
 # Licensed under CC BY 4.0 <http://creativecommons.org/licenses/by/4.0/>
 
+#This script demonstrates use of mxGREML to fit a continuous biometric-moderation model
+#(a la Purcell, 2002).  It uses the so-called "univariate" form of the model, 
+#under which the putative moderator is exogenous.  Construction of the "Gamma"
+#and "Lambda" matrices is per Tahmasbi, Evan, Turkheimer, & Keller (2017 preprint),
+# http://dx.doi.org/10.1101/191080 .
+
 library(mvtnorm)
 library(Matrix)
 library(OpenMx)
