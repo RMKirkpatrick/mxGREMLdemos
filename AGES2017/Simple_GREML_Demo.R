@@ -20,7 +20,7 @@ N <- 1000
 
 # Load and check data: ##################################################################
 
-#Load the GRM's data.  Argument 'prefix' to ReadGRMBin() should be everything in the filename and path of one of the GRM's
+#Load the GRM's data.  Argument 'prefix' to omxReadGRMBin() should be everything in the filename and path of one of the GRM's
 #that precedes the ".grm" :
 grmstuff <- omxReadGRMBin(prefix="AGES2017GRM",returnList=T)
 closeAllConnections()
@@ -28,7 +28,7 @@ str(grmstuff)
 #^^^grmstuff will be a list of 4 elements:
 #     $diag is a numeric vector containing the GRM's diagonal elements.
 #     $off is a numeric vector containing the GRM's off-diagonal elements.
-#     $id is a dataframe that contains the family and individual IDs orresponding to the rows and columns of the GRM.
+#     $id is a dataframe that contains the family and individual IDs corresponding to the rows and columns of the GRM.
 #     $N is the number of markers used to compute the GRM.
 
 #Use the elements of grmstuff to make a proper GRM:

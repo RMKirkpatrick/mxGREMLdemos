@@ -26,7 +26,7 @@ N <- 500 #<--Total number of participants.
 
 # Load and check data: ##################################################################
 
-#Load the GRM.  Argument 'prefix' to ReadGRMBin() should be everything in the filename and path of one of the GRM's
+#Load the GRM.  Argument 'prefix' to omxReadGRMBin() should be everything in the filename and path of one of the GRM's
 #that precedes the ".grm" :
 grmstuff <- omxReadGRMBin(prefix="AGES2017FactorModGRM",returnList=T)
 closeAllConnections()
