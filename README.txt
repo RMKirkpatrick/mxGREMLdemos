@@ -13,3 +13,7 @@ GREML fitfunction.  This use of analytic derivatives is best practice in terms
 computational speed.  In contrast, scripts with 'NodV' in their filename use
 SLSQP to calculate numeric derivatives in a multithreaded fashion, and do not
 use analytic derivatives.
+
+Newcomers to the mxGREML feature are encouraged to first examine the scripts
+in the `AGES2017` subdirectory, since those scripts are the most didactically
+oriented in the repository.
