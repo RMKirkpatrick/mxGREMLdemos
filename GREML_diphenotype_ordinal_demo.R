@@ -181,6 +181,7 @@ gremlmod <- mxModel(
 			mxComputeReportDeriv(),
 			mxComputeReportExpectation()
 		)),
+	#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' arguments in the above.
 	mxData(observed=gremldat$yX, type="raw", sort=F),
 	
 	#Trait 1's observed-scale additive-genetic variance:

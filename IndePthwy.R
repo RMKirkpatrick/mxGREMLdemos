@@ -166,6 +166,7 @@ plan <- mxComputeSequence(
 		mxComputeReportDeriv(),
 		mxComputeReportExpectation()
 	))
+#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 
 ipmod <- mxModel(
 	"IndePathway",
@@ -325,6 +326,7 @@ if(ipmod$output$status$code > 1){
 	ipmod$compute <- mxComputeSequence(
 		steps=list(
 			mxComputeGradientDescent(engine="SLSQP", useGradient=F, verbose=5L),
+			#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 			mxComputeNumericDeriv(),
 			mxComputeStandardError(),
 			mxComputeHessianQuality(),

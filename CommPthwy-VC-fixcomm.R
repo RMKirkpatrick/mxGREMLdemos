@@ -159,6 +159,7 @@ xpec <- mxExpectationGREML(V="V",yvars=c("y1","y2","y3","y4","y5"),Xvars=list(c(
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L),
+		#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),

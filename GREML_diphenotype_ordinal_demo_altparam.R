@@ -173,6 +173,7 @@ plan <- mxComputeSequence(
 		mxComputeReportDeriv(),
 		mxComputeReportExpectation()
 ))
+#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 
 #mxGREML model:
 gremlmod <- mxModel(

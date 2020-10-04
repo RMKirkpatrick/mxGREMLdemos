@@ -96,6 +96,7 @@ plan <- mxComputeSequence(
 		mxComputeReportDeriv(),
 		mxComputeReportExpectation()
 	))
+#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 
 #GREML model:
 gremlmod <- mxModel(
@@ -142,6 +143,7 @@ if( !(gremlmod$output$status$code %in% c(0,1)) ){
 		mxComputeReportDeriv(),
 		mxComputeReportExpectation()
 	))
+	#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 	gremlmod <- mxRun(gremlmod)
 	gc()
 }
@@ -156,6 +158,7 @@ if( !(gremlmod$output$status$code %in% c(0,1)) ){
 		mxComputeReportDeriv(),
 		mxComputeReportExpectation()
 	))
+	#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 	gremlmod <- mxRun(gremlmod)
 	gc()
 }
