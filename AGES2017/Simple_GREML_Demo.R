@@ -11,6 +11,9 @@
 
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
+#The MxModel in this script has only 2 explicit free parameters, so there's almost nothing to be gained by
+#setting the number of threads above 2:
+mxOption(NULL,"Number of threads",2)
 #You need to set R's working directory to the directory containing the data files for this demo.
 #(i.e., YOU MUST CHANGE THE NEXT LINE TO REFLECT WHERE, ON YOUR COMPUTER, YOU'VE PLACED THE DATA FILES):
 setwd("/home/rmk/OpenMx_dev/GREML_demos/repo/mxGREMLdemos/AGES2017/data")

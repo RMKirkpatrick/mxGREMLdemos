@@ -14,6 +14,8 @@ options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
 #Note that NPSOL is not available in the CRAN build of OpenMx.
 #However, this script can be run with CSOLNP or SLSQP:
 mxOption(NULL,"Default optimizer","NPSOL")
+#More threads means faster running time, but at the cost of higher memory demand:
+mxOption(NULL,"Number of threads",2)
 mxOption(NULL,"Analytic Gradients","Yes")
 #You need to set R's working directory to the directory containing the data files for this demo.
 #(i.e., YOU MUST CHANGE THE NEXT LINE TO REFLECT WHERE, ON YOUR COMPUTER, YOU'VE PLACED THE DATA FILES):
