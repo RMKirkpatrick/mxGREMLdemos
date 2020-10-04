@@ -89,7 +89,7 @@ her <- lm(hey~hex)$coefficients[2]
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L,tolerance=1e-7),
+		#mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L),
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
@@ -135,7 +135,7 @@ if( !(gremlmod$output$status$code %in% c(0,1)) ){
 	ws <- try(chol(gremlmod$output$hessian))
 	if("try-error" %in% class(ws)){ws <- NULL}
 	gremlmod$compute <- mxComputeSequence(steps=list(
-		mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L,warmStart=ws,tolerance=1e-7),
+		mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L,warmStart=ws),
 		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
@@ -149,7 +149,7 @@ if( !(gremlmod$output$status$code %in% c(0,1)) ){
 #If NPSOL doesn't reach a good solution, try again with SLSQP:
 if( !(gremlmod$output$status$code %in% c(0,1)) ){
 	gremlmod$compute <- mxComputeSequence(steps=list(
-		mxComputeGradientDescent(engine="SLSQP",useGradient=T,verbose=5L,tolerance=1e-7),
+		mxComputeGradientDescent(engine="SLSQP",useGradient=T,verbose=5L),
 		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),

@@ -228,13 +228,11 @@ if(factorRun$output$status$code > 1){
 	#NPSOL the trouble of figuring that out numerically, which in turn cuts down on the number of necessary
 	#fitfunction evaluations:
 	ws <- chol(factorRun$output$hessian)
-	#We will stick a new compute plan in place of the old.  Notice that we're giving NPSOL the warm start, telling it
-	#to use the analytic gradient, and also relaxing its optimality tolerance.  All of this will help it reach a 
-	#solution more quickly:
+	#We will stick a new compute plan in place of the old.  Notice that we're giving NPSOL the warm start, and telling it
+	#to use the analytic gradient.  That will help it reach a solution more quickly:
 	factorRun$compute <- mxComputeSequence(
 		steps=list(
-			mxComputeGradientDescent(engine = "NPSOL", useGradient = T, verbose=5, tolerance=1e-7,
-															 warmStart = ws),
+			mxComputeGradientDescent(engine = "NPSOL", useGradient = T, verbose=5, warmStart = ws),
 			mxComputeOnce('fitfunction', c('gradient','hessian')),
 			mxComputeStandardError(),
 			mxComputeReportDeriv(),

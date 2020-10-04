@@ -158,7 +158,7 @@ xpec <- mxExpectationGREML(V="V",yvars=c("y1","y2","y3","y4","y5"),Xvars=list(c(
 #Custom compute plan to use NPSOL, with analytic gradients but no warm start:
 plan <- mxComputeSequence(
 	steps=list(
-		mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L,tolerance=1e-7),
+		mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L),
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
@@ -167,8 +167,7 @@ plan <- mxComputeSequence(
 	))
 #^^^On the IBG laptops at the 2020 Boulder Workshop, I ran this script with NPSOL and with
 #the number of threads set to 4.  NPSOL appeared to enter a closed loop in which it repeatedly
-#got a non-finite fitfunction value.  If that's the case for you, use SLSQP instead, at the
-#default tolerance.
+#got a non-finite fitfunction value.  If that's the case for you, use SLSQP instead.
 
 cpmod <- mxModel(
 	"CommonPathway",
