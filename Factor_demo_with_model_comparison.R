@@ -208,7 +208,7 @@ factorRun <- mxRun(factorMod)
 object.size(factorRun) #<--How much memory does the fitted MxModel take up?:
 summary(factorRun)
 
-## Now, we fit an unstructured model, using direct-variance parameterization.  ##############################
+## Now, we fit an unstructured model, using direct-symmetric parameterization.  ##############################
 # This is the most "saturated" model we could fit in this context.
 
 #The next two options together tell NPSOL to write a log entry for each of its major iterations to a file in   
@@ -234,7 +234,7 @@ plan <- mxComputeSequence(
 
 
 directVCMod <- mxModel(
-	"DirectVC",
+	"DirectSymm",
 	mxdat,
 	ge,
 	plan,
@@ -473,7 +473,7 @@ cholMod <- mxModel(
 		), name="dcovE_de33"),
 	
 	#N.B. that all of the derivatives of 'covA' and 'covE' CONTAIN FREE PARAMETERS!
-	#That is in contrast to the direct-variance specification above.
+	#That is in contrast to the direct-symmetric specification above.
 	
 	#Derivatives of V w/r/t free parameters:
 	mxAlgebra(dcovA_da11%x%A, name="dV_da11"),
@@ -528,11 +528,11 @@ if(cholRun$output$status$code > 1){
 summary(cholRun)
 
 #It took 3 tries to get the Cholesky model to converge, and its solution still has a worse -2logL
-#than the direct-variance model:
+#than the direct-symmetric model:
 cholRun$output$fit
 directVCRun$output$fit
 
-#The Cholesky model's running time is more than an order of magnitude slower than the direct-variance model's,
+#The Cholesky model's running time is more than an order of magnitude slower than the direct-symmetric model's,
 #and that's ignoring the first two attempts to fit the Cholesky!:
 cholRun$output$wallTime
 directVCRun$output$wallTime
@@ -540,8 +540,8 @@ directVCRun$output$wallTime
 #Finally, compare the factor model to the "saturated" model:
 mxCompare(directVCRun, factorRun) #<--Non-significant deterioration of fit; factor model has smaller AIC.
 
-#The reason why the direct-variance model can achieve a smaller -2logL than the Cholesky model
-#is that the Cholesky is subject to an implicit constraint, to which the direct-variance model
+#The reason why the direct-symmetric model can achieve a smaller -2logL than the Cholesky model
+#is that the Cholesky is subject to an implicit constraint, to which the direct-symmetric model
 #is not subject--the Cholesky parameterization forces `covA` and `covE` to be positive-definite:
 eigen(mxEval(covA,cholRun,T))$values #<--All eigenvalues are positive.
 eigen(mxEval(covA,directVCRun,T))$values #<--Not all eigenvalues are positive.
