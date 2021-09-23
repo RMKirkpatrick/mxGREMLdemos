@@ -1,4 +1,4 @@
-# Copyright 2019-2020 by Robert M. Kirkpatrick
+# Copyright 2019-2021 by Robert M. Kirkpatrick
 # Licensed under CC BY 4.0 <http://creativecommons.org/licenses/by/4.0/>
 
 #This script is adapted from inst/models/nightly/GREML_monophenotype_1GRM_GradDesc.R in the OpenMx source repository.
