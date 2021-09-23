@@ -14,7 +14,7 @@ options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
 mxOption(NULL,"Default optimizer","SLSQP")
 #More threads means faster running time, but at the cost of higher memory demand:
 mxOption(NULL,"Number of threads",2)
-mxOption(NULL,"Analytic Gradients","No")
+#mxOption(NULL,"Analytic Gradients","No")
 #You need to set R's working directory to the directory containing the data files for this demo.
 #(i.e., YOU MUST CHANGE THE NEXT LINE TO REFLECT WHERE, ON YOUR COMPUTER, YOU'VE PLACED THE DATA FILES):
 setwd("/home/rmk/OpenMx_dev/GREML_demos/repo/mxGREMLdemos/AGES2017/data")

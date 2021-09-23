@@ -124,7 +124,7 @@ xpec <- mxExpectationGREML(
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L,tolerance=1e-7),
+		#mxComputeGradientDescent(engine="NPSOL",verbose=5L,tolerance=1e-7),
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
@@ -357,7 +357,7 @@ object.size(gremlmod) #<--How much memory does the fitted MxModel take up?:
 #If Newton-Raphson doesn't reach a good solution, try again with SLSQP:
 if( !(gremlmod$output$status$code %in% c(0,1)) ){
 	gremlmod$compute <- mxComputeSequence(steps=list(
-		mxComputeGradientDescent(engine="SLSQP",useGradient=T,verbose=5L),
+		mxComputeGradientDescent(engine="SLSQP",verbose=5L),
 		#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),

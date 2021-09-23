@@ -180,8 +180,8 @@ head(gremldat$yX)
 #Custom compute plan:
 plan <- mxComputeSequence(
 	steps=list(
-		mxComputeGradientDescent(engine="SLSQP",useGradient=T,verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L),
+		mxComputeGradientDescent(engine="SLSQP",verbose=5L),
+		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),

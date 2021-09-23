@@ -11,9 +11,6 @@
 
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
-#Note that NPSOL is not available in the CRAN build of OpenMx.
-#However, this script can be run with CSOLNP or SLSQP:
-mxOption(NULL,"Default optimizer","NPSOL")
 mxOption(NULL,"Analytic Gradients","Yes")
 #You need to set R's working directory to the directory containing the data files for this demo.
 #(i.e., YOU MUST CHANGE THE NEXT LINE TO REFLECT WHERE, ON YOUR COMPUTER, YOU'VE PLACED THE DATA FILES):
@@ -107,8 +104,8 @@ mxdat <- mxData(observed=gremldat$yX,type="raw",sort=FALSE)
 ge <- mxExpectationGREML(V="V",dataset.is.yX=TRUE,casesToDropFromV=casesToDrop)
 
 #We tell the GREML fitfunction the names of the first partial derivatives of 'V' w/r/t each free parameter:
-gff <- mxFitFunctionGREML(dV=c(l1="dV_dl1",l2="dV_dl2",l3="dV_dl3",va="dV_dva",vu1="dV_dvu1",
-															 vu2="dV_dvu2",vu3="dV_dvu3"))
+gff <- mxFitFunctionGREML(
+	dV=c(l1="dV_dl1",l2="dV_dl2",l3="dV_dl3",va="dV_dva",vu1="dV_dvu1",vu2="dV_dvu2",vu3="dV_dvu3"))
 
 #Custom compute plan, to use Newton-Raphson and see what the optimizer is doing in real time (via the 
 # 'verbose' argument):
@@ -224,7 +221,7 @@ summary(factorRun)
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L),
+		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
@@ -502,20 +499,22 @@ cholRun <- mxRun(cholMod)
 if(cholRun$output$status$code > 1){
 	cholRun$compute <- mxComputeSequence(
 		steps=list(
-			mxComputeGradientDescent(engine="NPSOL", useGradient=T, verbose=5L),
+			#mxComputeGradientDescent(engine="NPSOL", verbose=5L),
+			mxComputeGradientDescent(engine="CSOLNP", verbose=5L),
 			mxComputeOnce('fitfunction', c('gradient','hessian')),
 			mxComputeStandardError(),
 			mxComputeHessianQuality(),
 			mxComputeReportDeriv(),
 			mxComputeReportExpectation()
 		))
-	cholRun <- mxRun(cholRun)
+	cholRun <- mxRun(cholRun,checkpoint=T)
 }
 
 if(cholRun$output$status$code > 1){
+	mxOption(NULL,"Analytic Gradients","No")
 	cholRun$compute <- mxComputeSequence(
 		steps=list(
-			mxComputeGradientDescent(engine="SLSQP", useGradient=F, verbose=5L),
+			mxComputeGradientDescent(engine="SLSQP", verbose=5L),
 			mxComputeNumericDeriv(),
 			mxComputeStandardError(),
 			mxComputeHessianQuality(),
@@ -527,13 +526,13 @@ if(cholRun$output$status$code > 1){
 
 summary(cholRun)
 
-#It took 3 tries to get the Cholesky model to converge, and its solution still has a worse -2logL
+#It took at least 2 tries to get the Cholesky model to converge, and its solution still has a worse -2logL
 #than the direct-symmetric model:
 cholRun$output$fit
 directVCRun$output$fit
 
-#The Cholesky model's running time is more than an order of magnitude slower than the direct-symmetric model's,
-#and that's ignoring the first two attempts to fit the Cholesky!:
+#The Cholesky model's running time is 5 times slower than the direct-symmetric model's,
+#and that's ignoring the failed attempt(s) to fit the Cholesky!:
 cholRun$output$wallTime
 directVCRun$output$wallTime
 

@@ -169,7 +169,7 @@ gremlmod <- mxModel(
 	#Custom compute plan:
 	mxComputeSequence(
 		steps=list(
-			#mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L),
+			#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
 			mxComputeNewtonRaphson(verbose=5L),
 			mxComputeOnce("fitfunction", c("gradient","hessian")),
 			mxComputeConfidenceInterval(

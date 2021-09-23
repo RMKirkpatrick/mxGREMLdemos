@@ -234,7 +234,7 @@ if(factorRun$output$status$code > 1){
 	#to use the analytic gradient.  That will help it reach a solution more quickly:
 	factorRun$compute <- mxComputeSequence(
 		steps=list(
-			mxComputeGradientDescent(engine = "NPSOL", useGradient = T, verbose=5, warmStart = ws),
+			mxComputeGradientDescent(engine = "NPSOL", verbose=5, warmStart = ws),
 			mxComputeOnce('fitfunction', c('gradient','hessian')),
 			mxComputeStandardError(),
 			mxComputeReportDeriv(),
@@ -245,8 +245,8 @@ if(factorRun$output$status$code > 1){
 	summary(factorRun)
 }
 #^^^Note:  If you need to use MxConstraint objects in a GREML model, you will not be able to use Newton-Raphson.
-#In such a case, use NPSOL or SLSQP, with useGradient=T.  NPSOL/SLSQP will use the analytic first derivatives of the 
-#fitfunction w/r/t free parameters, and deal with the constraint functions numerically.
+#In such a case, use one of the gradient-based optimizers: NPSOL, SLSQP, or CSOLNP.  NPSOL/SLSQP will use the analytic 
+#first derivatives of the fitfunction w/r/t free parameters, and deal with the constraint functions numerically.
 
 
 

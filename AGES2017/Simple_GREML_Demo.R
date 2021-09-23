@@ -158,7 +158,7 @@ mxEval(h2,testrun,T)
 #confidence intervals for va, ve, and/or h2 (but not for the regression coefficients).
 #We have asymptotic-ML-theory standard errors for va and ve.  It is possible to obtain an SE for h2
 #using a delta-method approximation, though its accuracy is quesionable given the fairly small N:
-scm <- chol2inv(chol(testrun$output$hessian/2)) #<--Sampling covariance matrix for ve and va
+scm <- testrun$output$vcov #<--Sampling covariance matrix for ve and va
 pointest <- testrun$output$estimate #<--Point estimates of ve and va
 h2se <- sqrt(
 	(pointest[2]/(pointest[1]+pointest[2]))^2 * (

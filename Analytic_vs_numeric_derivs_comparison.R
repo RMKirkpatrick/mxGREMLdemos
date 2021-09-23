@@ -126,7 +126,7 @@ numericMod <- mxModel(
 	mxAlgebra( Lambda%*%t(Lambda), name="LamLamT"),
 	#The model-expected covariance matrix, per the Fundamental Theorem of Factor Analysis:
 	mxAlgebra(LamLamT%x%SigmaFac + vec2diag(Vu), name="V"),
-	mxFitFunctionGREML()
+	mxFitFunctionGREML(autoDerivType="numeric")
 )
 
 numericRun <- mxRun(numericMod)
@@ -140,7 +140,7 @@ object.size(numericRun)
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L),
+		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
 		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),

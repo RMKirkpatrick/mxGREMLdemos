@@ -159,7 +159,7 @@ xpec <- mxExpectationGREML(V="V",yvars=c("y1","y2","y3","y4"),Xvars=list(c("x1",
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L),
+		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
@@ -323,9 +323,10 @@ rm(GRM); gc()
 ipmod <- mxRun(ipmod)
 
 if(ipmod$output$status$code > 1){
+	mxOption(NULL,"Analytic Gradients","No")
 	ipmod$compute <- mxComputeSequence(
 		steps=list(
-			mxComputeGradientDescent(engine="SLSQP", useGradient=F, verbose=5L),
+			mxComputeGradientDescent(engine="SLSQP", verbose=5L),
 			#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 			mxComputeNumericDeriv(),
 			mxComputeStandardError(),

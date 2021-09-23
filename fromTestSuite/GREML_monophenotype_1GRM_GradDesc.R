@@ -67,7 +67,7 @@ testrun <- mxRun(testmod,intervals = T) #<--Run model
 summary(testrun) #<--Model summary
 
 #Obtain SE of h2 from delta-method approximation (e.g., Lynch & Walsh, 1998, Appendix 1):
-scm <- chol2inv(chol(testrun$output$hessian/2)) #<--Sampling covariance matrix for ve and va
+scm <- testrun$output$vcov #<--Sampling covariance matrix for ve and va
 pointest <- testrun$output$estimate #<--Point estimates of ve and va
 h2se <- sqrt(
 	(pointest[2]/(pointest[1]+pointest[2]))^2 * (

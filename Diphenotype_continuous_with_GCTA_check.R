@@ -14,9 +14,6 @@
 
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
-#Note that NPSOL is not available in the CRAN build of OpenMx.
-#However, this script can be run with CSOLNP or SLSQP:
-mxOption(NULL,"Default optimizer","NPSOL")
 #More threads means faster running time, but at the cost of higher memory demand:
 mxOption(NULL,"Number of threads",2)
 mxOption(NULL,"Analytic Gradients","Yes")
@@ -107,7 +104,7 @@ ge <- mxExpectationGREML(V="V",dataset.is.yX=TRUE,casesToDropFromV=casesToDrop)
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L),
+		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
 		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
