@@ -507,7 +507,7 @@ if(cholRun$output$status$code > 1){
 			mxComputeReportDeriv(),
 			mxComputeReportExpectation()
 		))
-	cholRun <- mxRun(cholRun,checkpoint=T)
+	cholRun <- mxRun(cholRun)
 }
 
 if(cholRun$output$status$code > 1){
