@@ -9,7 +9,7 @@ library(Matrix)
 library(OpenMx)
 library(lme4)
 options(mxCondenseMatrixSlots=TRUE)
-set.seed(170516)
+set.seed(210930)
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
@@ -124,7 +124,7 @@ xpec <- mxExpectationGREML(
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",verbose=5L,tolerance=1e-7),
+		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),

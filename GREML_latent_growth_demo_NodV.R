@@ -11,7 +11,7 @@ library(lme4)
 options(mxCondenseMatrixSlots=TRUE)
 mxOption(NULL,"Default optimizer","SLSQP")
 #mxOption(NULL,"Analytic Gradients","No")
-set.seed(170516)
+set.seed(210930)
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
