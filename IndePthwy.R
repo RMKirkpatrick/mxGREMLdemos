@@ -9,8 +9,6 @@ library(mvtnorm)
 library(Matrix)
 library(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)
-mxOption(NULL,"Default optimizer","NPSOL")
-mxOption(NULL,"Analytic Gradients","Yes")
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
@@ -25,6 +23,9 @@ mxOption(NULL,"Number of Threads",2)
 #clearly appear incorrect, NPSOL will terminate, with status code 7.  You need the "Print level" option above to see any details, though.
 #Useful if you modify the derivatives of the covariance matrix, but otherwise not worth the added computational effort:
 # mxOption(NULL,"Verify level",3)
+
+#NPSOL's default function precision is usually too strict for GREML:
+# mxOption(NULL,"Function precision",1e-7)
 
 #Number of simulees (participants):
 N <- 500

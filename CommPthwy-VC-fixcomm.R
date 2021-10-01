@@ -168,7 +168,9 @@ plan <- mxComputeSequence(
 	))
 #^^^On the IBG laptops at the 2020 Boulder Workshop, I ran this script with NPSOL and with
 #the number of threads set to 4.  NPSOL appeared to enter a closed loop in which it repeatedly
-#got a non-finite fitfunction value.  If that's the case for you, use SLSQP instead.
+#got a non-finite fitfunction value.  If that's the case for you, use SLSQP instead, or try 
+#uncommenting the following line:
+# mxOption(NULL,"Function precision",1e-7)
 
 cpmod <- mxModel(
 	"CommonPathway",

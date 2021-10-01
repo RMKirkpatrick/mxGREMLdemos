@@ -15,7 +15,6 @@ set.seed(180114)
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
-mxOption(NULL,"Default optimizer","NPSOL")
 mxOption(NULL,"Nudge zero starts","No")
 
 #Number of simulees (participants):
@@ -90,6 +89,7 @@ her <- lm(hey~hex)$coefficients[2]
 # mxOption(NULL,"Print level",20)
 # mxOption(NULL,"Print file",2)
 # mxOption(NULL,"Verify level",3)
+# mxOption(NULL,"Function precision",1e-7)
 
 #Compute plan; uses Newton-Raphson; fast, but not very robust:
 plan <- mxComputeSequence(
@@ -142,7 +142,7 @@ if( !(gremlmod$output$status$code %in% c(0,1)) ){
 	ws <- try(chol(gremlmod$output$hessian))
 	if("try-error" %in% class(ws)){ws <- NULL}
 	gremlmod$compute <- mxComputeSequence(steps=list(
-		mxComputeGradientDescent(engine="NPSOL",useGradient=T,verbose=5L,warmStart=ws),
+		mxComputeGradientDescent(engine="NPSOL",verbose=5L,warmStart=ws),
 		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),

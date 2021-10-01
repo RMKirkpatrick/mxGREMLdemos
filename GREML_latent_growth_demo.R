@@ -119,6 +119,7 @@ xpec <- mxExpectationGREML(
 # mxOption(NULL,"Print level",20)
 # mxOption(NULL,"Print file",1)
 # mxOption(NULL,"Verify level",3)
+# mxOption(NULL,"Function precision",1e-7)
 
 #Custom compute plan:
 plan <- mxComputeSequence(

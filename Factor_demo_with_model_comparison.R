@@ -218,6 +218,9 @@ summary(factorRun)
 #clearly appear incorrect, NPSOL will terminate, with status code 7.  You need the "Print level" option above to see any details, though.
 #Useful if you modify the derivatives of the covariance matrix, but otherwise not worth the added computational effort:
 # mxOption(NULL,"Verify level",3)
+
+#NPSOL's default function precision is usually too strict for GREML:
+# mxOption(NULL,"Function precision",1e-7)
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
