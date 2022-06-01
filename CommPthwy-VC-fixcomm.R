@@ -1,4 +1,4 @@
-# Copyright 2019-2021 by Robert M. Kirkpatrick
+# Copyright 2019-2022 by Robert M. Kirkpatrick
 # Licensed under CC BY 4.0 <http://creativecommons.org/licenses/by/4.0/>
 
 # Model identification: common-factor's variance is fixed to 1.0 with an implicit constraint.

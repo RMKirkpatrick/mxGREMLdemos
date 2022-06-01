@@ -1,4 +1,4 @@
-# Copyright 2019-2021 by Robert M. Kirkpatrick
+# Copyright 2019-2022 by Robert M. Kirkpatrick
 # Licensed under CC BY 4.0 <http://creativecommons.org/licenses/by/4.0/>
 
 # This is an adaptation of a script previously used at the 2017 AGES Workshop at Virginia Commonwealth University.

@@ -1,4 +1,4 @@
-# Copyright 2019-2020 by Robert M. Kirkpatrick
+# Copyright 2019-2022 by Robert M. Kirkpatrick
 # Licensed under CC BY 4.0 <http://creativecommons.org/licenses/by/4.0/>
 
 #This script fits the AGES2017 factor model thrice--once with numeric derivatives, once with semi-analytic derivatives,
@@ -293,4 +293,4 @@ numericRun$output$wallTime; semiAnalytRun$output$wallTime; analyticRun$output$wa
 #Analytic derivatives require the most memory:
 object.size(numericRun); object.size(semiAnalytRun); object.size(analyticRun)
 #Standard errors match fairly closely:
-numericRun$output$standardErrors; semiAnalytRun$output$standardErrors; analyticRun$output$standardErrors
+cbind(numericRun$output$standardErrors, semiAnalytRun$output$standardErrors, analyticRun$output$standardErrors)
