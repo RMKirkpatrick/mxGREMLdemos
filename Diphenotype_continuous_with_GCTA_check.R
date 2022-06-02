@@ -18,7 +18,7 @@ options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
 mxOption(NULL,"Number of threads",2)
 #You need to set R's working directory to the directory containing the data files for this demo.
 #(i.e., YOU MUST CHANGE THE NEXT LINE TO REFLECT WHERE, ON YOUR COMPUTER, YOU'VE PLACED THE DATA FILES):
-setwd("/home/rmk/OpenMx_dev/GREML_demos/repo/mxGREMLdemos/data")
+setwd("./data")
 
 N <- 1000 #<--Total number of participants.
 #^^^We're using a small sample size for the sake of making the MxModel run quickly.
