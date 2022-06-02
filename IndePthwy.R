@@ -9,23 +9,10 @@ library(mvtnorm)
 library(Matrix)
 library(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)
+mxOption(NULL,"Default optimizer","SLSQP")
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
-
-#The next two options together tell NPSOL to write a log entry for each of its major iterations to a file in   
-#the working directory, called 'fort.1' (change the value of "Print file" option to a different positive integer to change the extension 
-#to 'fort'):
-# mxOption(NULL,"Print level",20)
-# mxOption(NULL,"Print file",1)
-
-#The following option will tell NPSOL to check the analytic gradient elements against its numerical derivatives.  If the analytic derivatives
-#clearly appear incorrect, NPSOL will terminate, with status code 7.  You need the "Print level" option above to see any details, though.
-#Useful if you modify the derivatives of the covariance matrix, but otherwise not worth the added computational effort:
-# mxOption(NULL,"Verify level",3)
-
-#NPSOL's default function precision is usually too strict for GREML:
-# mxOption(NULL,"Function precision",1e-7)
 
 #Number of simulees (participants):
 N <- 500
@@ -156,23 +143,9 @@ for(i in 1:4){
 #This is the MxExpectationGREML object.  The value of argument 'Xvars' is telling OpenMx to regress all five phenotypes onto both covariates:
 xpec <- mxExpectationGREML(V="V",yvars=c("y1","y2","y3","y4"),Xvars=list(c("x1","x2")),blockByPheno=T)
 
-#Custom compute plan:
-plan <- mxComputeSequence(
-	steps=list(
-		mxComputeNewtonRaphson(verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
-		mxComputeOnce("fitfunction", c("gradient","hessian")),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
-
 ipmod <- mxModel(
 	"IndePathway",
 	xpec,
-	plan,
 	#sort=FALSE is CRITICALLY IMPORTANT!  It turns off OpenMx's automatic sorting of data rows.
 	#We don't want to rearrange the rows, because they are already aligned with the rows and columns of the GRM:
 	mxData(observed=widedata,type="raw",sort=FALSE),
@@ -218,127 +191,13 @@ ipmod <- mxModel(
 			cbind(Zip, Zip, Zip, vec2diag(Uno%x%Veu4))),name="UniqueE"),
 	mxAlgebra( (LALAT%x%A) + (LELET%x%vec2diag(Uno)) + UniqueA + UniqueE, name="V" ), #<--Covariance matrix
 	
-	#Derivatives of V w/r/t free parameters:
-	mxAlgebra(rbind(
-		cbind(A%x%(2*LA[1,1]),A%x%LA[2,1],A%x%LA[3,1],A%x%LA[4,1]),
-		cbind(A%x%LA[2,1],Zip,Zip,Zip),
-		cbind(A%x%LA[3,1],Zip,Zip,Zip),
-		cbind(A%x%LA[4,1],Zip,Zip,Zip)),name="dV_dlac1"),
-	mxAlgebra(rbind(
-		cbind(Zip,A%x%LA[1,1],Zip,Zip),
-		cbind(A%x%LA[1,1],A%x%(2*LA[2,1]),A%x%LA[3,1],A%x%LA[4,1]),
-		cbind(Zip,A%x%LA[3,1],Zip,Zip),
-		cbind(Zip,A%x%LA[4,1],Zip,Zip)),name="dV_dlac2"),
-	mxAlgebra(rbind(
-		cbind(Zip,Zip,A%x%LA[1,1],Zip),
-		cbind(Zip,Zip,A%x%LA[2,1],Zip),
-		cbind(A%x%LA[1,1],A%x%LA[2,1],A%x%(2*LA[3,1]),A%x%LA[4,1]),
-		cbind(Zip,Zip,A%x%LA[4,1],Zip)),name="dV_dlac3"),
-	mxAlgebra(rbind(
-		cbind(Zip,Zip,Zip,A%x%LA[1,1]),
-		cbind(Zip,Zip,Zip,A%x%LA[2,1]),
-		cbind(Zip,Zip,Zip,A%x%LA[3,1]),
-		cbind(A%x%LA[1,1],A%x%LA[2,1],A%x%LA[3,1],A%x%(2*LA[4,1]))),name="dV_dlac4"),
-	
-	mxAlgebra(rbind(
-		cbind(vec2diag(Uno%x%(2*LE[1,1])),vec2diag(Uno%x%LE[2,1]),vec2diag(Uno%x%LE[3,1]),vec2diag(Uno%x%LE[4,1])),
-		cbind(vec2diag(Uno%x%LE[2,1]),Zip,Zip,Zip),
-		cbind(vec2diag(Uno%x%LE[3,1]),Zip,Zip,Zip),
-		cbind(vec2diag(Uno%x%LE[4,1]),Zip,Zip,Zip)),name="dV_dlec1"),
-	mxAlgebra(rbind(
-		cbind(Zip,vec2diag(Uno%x%LE[1,1]),Zip,Zip),
-		cbind(vec2diag(Uno%x%LE[1,1]),vec2diag(Uno%x%(2*LE[2,1])),vec2diag(Uno%x%LE[3,1]),vec2diag(Uno%x%LE[4,1])),
-		cbind(Zip,vec2diag(Uno%x%LE[3,1]),Zip,Zip),
-		cbind(Zip,vec2diag(Uno%x%LE[4,1]),Zip,Zip)),name="dV_dlec2"),
-	mxAlgebra(rbind(
-		cbind(Zip,Zip,vec2diag(Uno%x%LE[1,1]),Zip),
-		cbind(Zip,Zip,vec2diag(Uno%x%LE[2,1]),Zip),
-		cbind(vec2diag(Uno%x%LE[1,1]),vec2diag(Uno%x%LE[2,1]),vec2diag(Uno%x%(2*LE[3,1])),vec2diag(Uno%x%LE[4,1])),
-		cbind(Zip,Zip,vec2diag(Uno%x%LE[4,1]),Zip)),name="dV_dlec3"),
-	mxAlgebra(rbind(
-		cbind(Zip,Zip,Zip,vec2diag(Uno%x%LE[1,1])),
-		cbind(Zip,Zip,Zip,vec2diag(Uno%x%LE[2,1])),
-		cbind(Zip,Zip,Zip,vec2diag(Uno%x%LE[3,1])),
-		cbind(vec2diag(Uno%x%LE[1,1]),vec2diag(Uno%x%LE[2,1]),vec2diag(Uno%x%LE[3,1]),vec2diag(Uno%x%(2*LE[4,1])))),name="dV_dlec4"),
-	
-	mxAlgebra(
-		rbind(
-			cbind(A, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip)), name="dV_dvau1"),
-	mxAlgebra(
-		rbind(
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, A, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip)), name="dV_dvau2"),
-	mxAlgebra(
-		rbind(
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, A, Zip),
-			cbind(Zip, Zip, Zip, Zip)), name="dV_dvau3"),
-	mxAlgebra(
-		rbind(
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, A)), name="dV_dvau4"),
-	
-	mxAlgebra(
-		rbind(
-			cbind(vec2diag(Uno), Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip)), name="dV_dveu1"),
-	mxAlgebra(
-		rbind(
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, vec2diag(Uno), Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip)), name="dV_dveu2"),
-	mxAlgebra(
-		rbind(
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, vec2diag(Uno), Zip),
-			cbind(Zip, Zip, Zip, Zip)), name="dV_dveu3"),
-	mxAlgebra(
-		rbind(
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, Zip),
-			cbind(Zip, Zip, Zip, vec2diag(Uno))), name="dV_dveu4"),
-	
-	mxFitFunctionGREML(dV=c(
-		lac1="dV_dlac1",lac2="dV_dlac2",lac3="dV_dlac3",lac4="dV_dlac4",
-		lec1="dV_dlec1",lec2="dV_dlec2",lec3="dV_dlec3",lec4="dV_dlec4",
-		vau1="dV_dvau1",vau2="dV_dvau2",vau3="dV_dvau3",vau4="dV_dvau4",
-		veu1="dV_dveu1",veu2="dV_dveu2",veu3="dV_dveu3",veu4="dV_dveu4"))
+	mxFitFunctionGREML()
 )
 rm(GRM); gc()
 
 #Clobbering the unfitted MxModel with the fitted MxModel object will NOT reduce peak memory demand, but it will allow R to free more memory
 #after the call to mxRun() is complete:
 ipmod <- mxRun(ipmod)
-
-if(ipmod$output$status$code > 1){
-	mxOption(NULL,"Analytic Gradients","No")
-	ipmod$compute <- mxComputeSequence(
-		steps=list(
-			mxComputeGradientDescent(engine="SLSQP", verbose=5L),
-			#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
-			mxComputeNumericDeriv(),
-			mxComputeStandardError(),
-			mxComputeHessianQuality(),
-			mxComputeReportDeriv(),
-			mxComputeReportExpectation()
-		))
-	ipmod <- mxRun(ipmod)
-}
-
-
 object.size(ipmod) #<--How much memory does the fitted MxModel take up?:
 summary(ipmod,verbose=T)
 coef(ipmod); truevals

@@ -11,9 +11,12 @@
 
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
-mxOption(NULL,"Default optimizer","SLSQP")
+#Note that NPSOL is not available in the CRAN build of OpenMx.
+#However, this script can be run with CSOLNP or SLSQP:
+mxOption(NULL,"Default optimizer","NPSOL")
 #More threads means faster running time, but at the cost of higher memory demand:
 mxOption(NULL,"Number of threads",2)
+mxOption(NULL,"Analytic Gradients","Yes")
 #You need to set R's working directory to the directory containing the data files for this demo.
 #(i.e., YOU MUST CHANGE THE NEXT LINE TO REFLECT WHERE, ON YOUR COMPUTER, YOU'VE PLACED THE DATA FILES):
 setwd("/home/rmk/OpenMx_dev/GREML_demos/repo/mxGREMLdemos/AGES2017/data")
@@ -33,7 +36,7 @@ str(grmstuff)
 #^^^grmstuff will be a list of 4 elements:
 #     $diag is a numeric vector containing the GRM's diagonal elements.
 #     $off is a numeric vector containing the GRM's off-diagonal elements.
-#     $id is a dataframe that contains the family and individual IDs corresponding to the rows and columns of the GRM.
+#     $id is a dataframe that contains the family and individual IDs orresponding to the rows and columns of the GRM.
 #     $N is the number of markers used to compute the GRM.
 
 #Use the elements of grmstuff to make a proper GRM:
@@ -105,6 +108,24 @@ mxdat <- mxData(observed=gremldat$yX,type="raw",sort=FALSE)
 #being input is y horizontally adhered to X (and therefore, it should not call the data-handler at runtime):
 ge <- mxExpectationGREML(V="V",dataset.is.yX=TRUE,casesToDropFromV=casesToDrop)
 
+#We tell the GREML fitfunction the names of the first partial derivatives of 'V' w/r/t each free parameter:
+gff <- mxFitFunctionGREML(dV=c(l1="dV_dl1",l2="dV_dl2",l3="dV_dl3",va="dV_dva",vu1="dV_dvu1",
+															 vu2="dV_dvu2",vu3="dV_dvu3"))
+
+#Custom compute plan, to use Newton-Raphson and see what the optimizer is doing in real time (via the 
+# 'verbose' argument):
+plan <- mxComputeSequence(
+	steps=list(
+		mxComputeNewtonRaphson(verbose=5L),
+		mxComputeOnce('fitfunction', c('gradient','hessian')),
+		mxComputeStandardError(),
+		mxComputeHessianQuality(),
+		mxComputeReportDeriv(),
+		mxComputeReportExpectation()
+	))
+#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
+
+
 
 # Create the MxModel: ################################################################################
 #(We will create a lot of objects inside the mxModel() statement.  This helps to save memory.)
@@ -113,6 +134,8 @@ factorMod <- mxModel(
 	"GREMLfactordemo",
 	mxdat,
 	ge,
+	gff,
+	plan,
 	#This will be our matrix of factor loadings:
 	mxMatrix(type="Full",nrow=3,ncol=1,free=T,values=sqrt(orv/2),
 					 labels=c("l1","l2","l3"),
@@ -136,12 +159,55 @@ factorMod <- mxModel(
 	mxAlgebra( Lambda%*%t(Lambda), name="LamLamT"),
 	#The model-expected covariance matrix, per the Fundamental Theorem of Factor Analysis:
 	mxAlgebra(LamLamT%x%SigmaFac + vec2diag(Vu), name="V"),
-	mxFitFunctionGREML()
+	#First partial derivative of V w/r/t va:
+	mxAlgebra(LamLamT%x%(A-I), name="dV_dva"),
+	#First partial derivative of V w/r/t vu1:
+	mxAlgebra(rbind(
+		cbind(I,Zip,Zip),
+		cbind(Zip,Zip,Zip),
+		cbind(Zip,Zip,Zip)
+	), name="dV_dvu1"),
+	#First partial derivative of V w/r/t vu2:
+	mxAlgebra(rbind(
+		cbind(Zip,Zip,Zip),
+		cbind(Zip,I,Zip),
+		cbind(Zip,Zip,Zip)
+	), name="dV_dvu2"),
+	#First partial derivative of V w/r/t vu3:
+	mxAlgebra(rbind(
+		cbind(Zip,Zip,Zip),
+		cbind(Zip,Zip,Zip),
+		cbind(Zip,Zip,I)
+	), name="dV_dvu3"),
+	#First partial derivative of LamLamT w/r/t l1:
+	mxAlgebra(rbind(
+		cbind(2*Lambda[1,1],Lambda[2,1],Lambda[3,1]),
+		cbind(Lambda[2,1],0,0),
+		cbind(Lambda[3,1],0,0)),
+		name="dLamLamT_dl1"),
+	#First partial derivative of V w/r/t l1:
+	mxAlgebra(dLamLamT_dl1%x%SigmaFac, name="dV_dl1"),
+	#First partial derivative of LamLamT w/r/t l2:
+	mxAlgebra(rbind(
+		cbind(0,Lambda[1,1],0),
+		cbind(Lambda[1,1],2*Lambda[2,1],Lambda[3,1]),
+		cbind(0,Lambda[3,1],0)),
+		name="dLamLamT_dl2"),
+	#First partial derivative of V w/r/t l2:
+	mxAlgebra(dLamLamT_dl2%x%SigmaFac, name="dV_dl2"),
+	#First partial derivative of LamLamT w/r/t l3:
+	mxAlgebra(rbind(
+		cbind(0,0,Lambda[1,1]),
+		cbind(0,0,Lambda[2,1]),
+		cbind(Lambda[1,1],Lambda[2,1],2*Lambda[3,1])),
+		name="dLamLamT_dl3"),
+	#First partial derivative of V w/r/t l3:
+	mxAlgebra(dLamLamT_dl3%x%SigmaFac, name="dV_dl3")
 )
 
 #Once the MxModel object has been created, we can delete objects in R's workspace which have been copied into the 
 #MxModel, or which we simply don't need anymore.  This saves memory:
-rm(GRM,ge,gremldat,mxdat,grmstuff)
+rm(GRM,ge,gff,gremldat,mxdat,grmstuff,plan)
 #This tells R to do "garbage collection":
 gc()
 
@@ -149,6 +215,38 @@ gc()
 factorRun <- mxRun(factorMod)
 object.size(factorRun) #<--How much memory does the fitted MxModel take up?:
 summary(factorRun)
+
+
+# Conditional re-run, using NPSOL: #######################################################################
+
+#This section of code should be run if the initial mxRun() call results in a status code 4 ("blue"), 
+#or 5 or 6 ("red").  What it does is re-run the MxModel, but with a different optimizer, NPSOL, and exploiting
+#as much as possible NPSOL's ability to use analytic fitfunction derivatives:
+if(factorRun$output$status$code > 1){
+	#This is what NPSOL's developers call a "warm start."  It's the upper-triangular Cholesky factor of the Hessian
+	#matrix, evaluated at the start values.  We are going to re-run the model again, starting at the values 
+	#Newton-Raphson reached, and we therefore have the Hessian matrix at the initial values.  The reason the warm
+	#start is useful that it tells NPSOL the curvature of the fitfunction surface at the initial values, which saves
+	#NPSOL the trouble of figuring that out numerically, which in turn cuts down on the number of necessary
+	#fitfunction evaluations:
+	ws <- chol(factorRun$output$hessian)
+	#We will stick a new compute plan in place of the old.  Notice that we're giving NPSOL the warm start, and telling it
+	#to use the analytic gradient.  That will help it reach a solution more quickly:
+	factorRun$compute <- mxComputeSequence(
+		steps=list(
+			mxComputeGradientDescent(engine = "NPSOL", verbose=5, warmStart = ws),
+			mxComputeOnce('fitfunction', c('gradient','hessian')),
+			mxComputeStandardError(),
+			mxComputeReportDeriv(),
+			mxComputeReportExpectation()
+		))
+	#Re-run and see summary:
+	factorRun <- mxRun(factorRun)
+	summary(factorRun)
+}
+#^^^Note:  If you need to use MxConstraint objects in a GREML model, you will not be able to use Newton-Raphson.
+#In such a case, use one of the gradient-based optimizers: NPSOL, SLSQP, or CSOLNP.  NPSOL/SLSQP will use the analytic 
+#first derivatives of the fitfunction w/r/t free parameters, and deal with the constraint functions numerically.
 
 
 

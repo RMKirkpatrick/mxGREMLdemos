@@ -15,6 +15,7 @@ set.seed(180114)
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
+mxOption(NULL,"Default optimizer","SLSQP")
 mxOption(NULL,"Nudge zero starts","No")
 
 #Number of simulees (participants):
@@ -84,30 +85,9 @@ for(i in 1:(N-1)){
 rm(U1); gc()
 her <- lm(hey~hex)$coefficients[2]
 
-
-#Options to set if you are going to use NPSOL to verify analytic derivatives:
-# mxOption(NULL,"Print level",20)
-# mxOption(NULL,"Print file",2)
-# mxOption(NULL,"Verify level",3)
-# mxOption(NULL,"Function precision",1e-7)
-
-#Compute plan; uses Newton-Raphson; fast, but not very robust:
-plan <- mxComputeSequence(
-	steps=list(
-		mxComputeNewtonRaphson(verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
-		mxComputeOnce("fitfunction", c("gradient","hessian")),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
-
 #GREML model:
 gremlmod <- mxModel(
 	"GREML",
-	plan,
 	mxData(cbind(y=y,m=m),type="raw",sort=FALSE),
 	mxExpectationGREML(V="V",yvars="y",Xvars="m"),
 	mxMatrix(type="Full",nrow=1,ncol=1,free=T,values=sqrt(her),labels="a0",name="A0"),
@@ -125,48 +105,11 @@ gremlmod <- mxModel(
 	mxAlgebra( (A0^2)%x%A + (A0*A1)%x%LambdaA + (A1^2)%x%GammaA + vec2diag(Uno%x%E0^2) + vec2diag(K1d%x%(E0*E1)) + vec2diag(K2d%x%(E1^2)),
 						 name="V" ),
 	
-	mxAlgebra( (2*A0)%x%A + A1%x%LambdaA, name="dV_da0"),
-	mxAlgebra( A0%x%LambdaA + (2*A1)%x%GammaA, name="dV_da1"),
-	mxAlgebra( vec2diag(Uno%x%(2*E0)) + vec2diag(K1d%x%E1), name="dV_de0"),
-	mxAlgebra( vec2diag(K1d%x%E0) + vec2diag(K2d%x%(2*E1)), name="dV_de1"),
-	
-	mxFitFunctionGREML(dV=c(a0="dV_da0", a1="dV_da1", e0="dV_de0", e1="dV_de1"))
+	mxFitFunctionGREML()
 )
-rm(Gamma,GammaGRM,GRM,K1,K2,Lambda,LambdaGRM,plan); gc()
+rm(Gamma,GammaGRM,GRM,K1,K2,Lambda,LambdaGRM); gc()
 gremlmod <- mxRun(gremlmod)
 gc()
 object.size(gremlmod) #<--How much memory does the fitted MxModel take up?:
-
-#If Newton-Raphson doesn't reach a good solution, try again with (possibly warm-started) NPSOL :
-if( !(gremlmod$output$status$code %in% c(0,1)) ){
-	ws <- try(chol(gremlmod$output$hessian))
-	if("try-error" %in% class(ws)){ws <- NULL}
-	gremlmod$compute <- mxComputeSequence(steps=list(
-		mxComputeGradientDescent(engine="NPSOL",verbose=5L,warmStart=ws),
-		mxComputeOnce('fitfunction', c('gradient','hessian')),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-	#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
-	gremlmod <- mxRun(gremlmod)
-	gc()
-}
-
-#If NPSOL doesn't reach a good solution, try again with SLSQP:
-if( !(gremlmod$output$status$code %in% c(0,1)) ){
-	gremlmod$compute <- mxComputeSequence(steps=list(
-		mxComputeGradientDescent(engine="SLSQP",verbose=5L),
-		mxComputeOnce('fitfunction', c('gradient','hessian')),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-	#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
-	gremlmod <- mxRun(gremlmod)
-	gc()
-}
 
 summary(gremlmod,verbose=T)

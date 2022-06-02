@@ -9,7 +9,6 @@ library(Matrix)
 library(OpenMx)
 library(lme4)
 options(mxCondenseMatrixSlots=TRUE)
-mxOption(NULL,"Default optimizer","SLSQP")
 set.seed(210930)
 
 #With more threads, the job will run more quickly, but will require more memory:
@@ -116,9 +115,29 @@ xpec <- mxExpectationGREML(
 	Xvars=list("age1","age2","age3","age4","age5"), 
 	staggerZeroes=FALSE)
 
+# #Options for verifying analytic derivatives with NPSOL:
+# mxOption(NULL,"Print level",20)
+# mxOption(NULL,"Print file",1)
+# mxOption(NULL,"Verify level",3)
+# mxOption(NULL,"Function precision",1e-7)
+
+#Custom compute plan:
+plan <- mxComputeSequence(
+	steps=list(
+		mxComputeNewtonRaphson(verbose=5L),
+		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
+		mxComputeOnce("fitfunction", c("gradient","hessian")),
+		mxComputeStandardError(),
+		mxComputeHessianQuality(),
+		mxComputeReportDeriv(),
+		mxComputeReportExpectation()
+	))
+#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
+
 gremlmod <- mxModel(
 	"LatentGrowth",
 	xpec, #<--Expectation
+	plan, #<--Compute plan
 	#sort=FALSE is CRITICALLY IMPORTANT!  It turns off OpenMx's automatic sorting of data rows.
 	#We don't want to rearrange the rows, because they are already aligned with the rows and columns of the GRM:
 	mxData(observed=widedata,type="raw",sort=FALSE),
@@ -157,9 +176,7 @@ gremlmod <- mxModel(
 	mxAlgebra(A%x%Val, name="Aval"),
 	mxAlgebra(Aval + vec2diag(Vel), name="AvalPlusVel"),
 	
-	#Blocks (submatrices) of the derivative of V w/r/t additive-genetic variance in slope
-	#(note that, in this script, these matrices are only used to construct V, as this script does not use analytic 
-	#derivatives of V in the fitfunction):
+	#Blocks (submatrices) of the derivative of V w/r/t additive-genetic variance in slope:
 	mxMatrix(type="Full", nrow=N, ncol=N, free=F, values=outer(age1,age1)*GRM, name="dV_dvas_11"),
 	mxMatrix(type="Full", nrow=N, ncol=N, free=F, values=outer(age2,age1)*GRM, name="dV_dvas_21"),
 	mxMatrix(type="Full", nrow=N, ncol=N, free=F, values=outer(age2,age2)*GRM, name="dV_dvas_22"),
@@ -176,9 +193,7 @@ gremlmod <- mxModel(
 	mxMatrix(type="Full", nrow=N, ncol=N, free=F, values=outer(age5,age4)*GRM, name="dV_dvas_54"),
 	mxMatrix(type="Full", nrow=N, ncol=N, free=F, values=outer(age5,age5)*GRM, name="dV_dvas_55"),
 	
-	#Blocks (submatrices) of the derivative of V w/r/t additive-genetic covariance between intercept and slope
-	#(note that, in this script, these matrices are only used to construct V, as this script does not use analytic 
-	#derivatives of V in the fitfunction):
+	#Blocks (submatrices) of the derivative of V w/r/t additive-genetic covariance between intercept and slope:
 	mxMatrix(type="Full", nrow=N, ncol=N, free=F, values=diag(age1)%*%GRM + GRM%*%diag(age1), name="dV_dca_11"),
 	mxMatrix(type="Full", nrow=N, ncol=N, free=F, values=diag(age2)%*%GRM + GRM%*%diag(age1), name="dV_dca_21"),
 	mxMatrix(type="Full", nrow=N, ncol=N, free=F, values=diag(age2)%*%GRM + GRM%*%diag(age2), name="dV_dca_22"),
@@ -248,18 +263,112 @@ gremlmod <- mxModel(
 				A%x%Vau + Veu)
 	), name="V"),
 	
+	#Derivative of V w/r/t additive-genetic variance in intercept:
+	mxAlgebra(
+		rbind(
+			cbind(A,Zip,Zip,Zip,Zip),
+			cbind(A,A,Zip,Zip,Zip),
+			cbind(A,A,A,Zip,Zip),
+			cbind(A,A,A,A,Zip),
+			cbind(A,A,A,A,A)
+		), name="dV_dval"),
+	
+	#Derivative of V w/r/t nonshared-environmental variance in intercept:
+	mxAlgebra(
+		rbind(
+			cbind(I,Zip,Zip,Zip,Zip),
+			cbind(I,I,Zip,Zip,Zip),
+			cbind(I,I,I,Zip,Zip),
+			cbind(I,I,I,I,Zip),
+			cbind(I,I,I,I,I)
+		), name="dV_dvel"),
+	
+	#Derivative of V w/r/t additive-genetic variance in slope:
+	mxAlgebra(
+		rbind(
+			cbind(dV_dvas_11, Zip, Zip, Zip, Zip),
+			cbind(dV_dvas_21, dV_dvas_22, Zip, Zip, Zip),
+			cbind(dV_dvas_31, dV_dvas_32, dV_dvas_33, Zip, Zip),
+			cbind(dV_dvas_41, dV_dvas_42, dV_dvas_43, dV_dvas_44, Zip),
+			cbind(dV_dvas_51, dV_dvas_52, dV_dvas_53, dV_dvas_54, dV_dvas_55)
+		), name="dV_dvas"),
+	
+	#Derivative of V w/r/t additive-genetic covariance between slope and intercept:
+	mxAlgebra(
+		rbind(
+			cbind(dV_dca_11, Zip, Zip, Zip, Zip),
+			cbind(dV_dca_21, dV_dca_22, Zip, Zip, Zip),
+			cbind(dV_dca_31, dV_dca_32, dV_dca_33, Zip, Zip),
+			cbind(dV_dca_41, dV_dca_42, dV_dca_43, dV_dca_44, Zip),
+			cbind(dV_dca_51, dV_dca_52, dV_dca_53, dV_dca_54, dV_dca_55)
+		), name="dV_dca"),
+	
+	#Derivative of V w/r/t nonshared-environmental variance in slope:
+	mxAlgebra(rbind(
+		cbind(vec2diag(Age1*Age1), Zip, Zip, Zip, Zip),
+		cbind(vec2diag(Age2*Age1), vec2diag(Age2*Age2), Zip, Zip, Zip),
+		cbind(vec2diag(Age3*Age1), vec2diag(Age3*Age2), vec2diag(Age3*Age3), Zip, Zip),
+		cbind(vec2diag(Age4*Age1), vec2diag(Age4*Age2), vec2diag(Age4*Age3), vec2diag(Age4*Age4), Zip),
+		cbind(vec2diag(Age5*Age1), vec2diag(Age5*Age2), vec2diag(Age5*Age3), vec2diag(Age5*Age4), vec2diag(Age5*Age5))
+	), name="dV_dves"),
+	
+	#Derivative of V w/r/t nonshared-environmental covariance between slope and intercept:
+	mxAlgebra(rbind(
+		cbind(vec2diag(Age1+Age1), Zip, Zip, Zip, Zip),
+		cbind(vec2diag(Age2+Age1), vec2diag(Age2+Age2), Zip, Zip, Zip),
+		cbind(vec2diag(Age3+Age1), vec2diag(Age3+Age2), vec2diag(Age3+Age3), Zip, Zip),
+		cbind(vec2diag(Age4+Age1), vec2diag(Age4+Age2), vec2diag(Age4+Age3), vec2diag(Age4+Age4), Zip),
+		cbind(vec2diag(Age5+Age1), vec2diag(Age5+Age2), vec2diag(Age5+Age3), vec2diag(Age5+Age4), vec2diag(Age5+Age5))
+	), name="dV_dce"),
+	
+	#Derivative of V w/r/t additive-genetic unique variance:
+	mxAlgebra(
+		rbind(
+			cbind(A,Zip,Zip,Zip,Zip),
+			cbind(Zip,A,Zip,Zip,Zip),
+			cbind(Zip,Zip,A,Zip,Zip),
+			cbind(Zip,Zip,Zip,A,Zip),
+			cbind(Zip,Zip,Zip,Zip,A)
+		), name="dV_dvau"),
+	
+	#Derivative of V w/r/t nonshared-environmental unique variance:
+	mxAlgebra(
+		rbind(
+			cbind(I,Zip,Zip,Zip,Zip),
+			cbind(Zip,I,Zip,Zip,Zip),
+			cbind(Zip,Zip,I,Zip,Zip),
+			cbind(Zip,Zip,Zip,I,Zip),
+			cbind(Zip,Zip,Zip,Zip,I)
+		), name="dV_dveu"),
+	
 	#GREML fitfunction object:
-	mxFitFunctionGREML()
+	mxFitFunctionGREML(dV=c(
+		val="dV_dval",vel="dV_dvel",vas="dV_dvas",ves="dV_dves",ca="dV_dca",ce="dV_dce",vau="dV_dvau",veu="dV_dveu"))
 )
 
 #Remove unneeded objects:
-rm(widedata,GRM,age1,age2,age3,age4,age5); gc()
+rm(widedata,GRM); gc()
 
 #Clobbering the unfitted MxModel with the fitted MxModel object will not reduce peak memory demand, but it will allow R to free more memory
 #after the call to mxRun() is complete:
 gremlmod <- mxRun(gremlmod)
 gc()
 object.size(gremlmod) #<--How much memory does the fitted MxModel take up?:
+
+#If Newton-Raphson doesn't reach a good solution, try again with SLSQP:
+if( !(gremlmod$output$status$code %in% c(0,1)) ){
+	gremlmod$compute <- mxComputeSequence(steps=list(
+		mxComputeGradientDescent(engine="SLSQP",verbose=5L),
+		#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
+		mxComputeOnce('fitfunction', c('gradient','hessian')),
+		mxComputeStandardError(),
+		mxComputeHessianQuality(),
+		mxComputeReportDeriv(),
+		mxComputeReportExpectation()
+	))
+	gremlmod <- mxRun(gremlmod)
+	gc()
+}
 
 summary(gremlmod, verbose=T)
 truevals
