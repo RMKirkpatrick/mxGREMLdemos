@@ -11,7 +11,7 @@
 
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
-mxOption(NULL,"Analytic Gradients","Yes")
+mxOption(NULL,"Analytic Gradients","Yes") #<--"Yes" is the on-load default.
 #You need to set R's working directory to the directory containing the data files for this demo.
 #(i.e., YOU MUST CHANGE THE NEXT LINE TO REFLECT WHERE, ON YOUR COMPUTER, YOU'VE PLACED THE DATA FILES):
 setwd("./AGES2017/data")
@@ -534,7 +534,7 @@ summary(cholRun)
 cholRun$output$fit
 directVCRun$output$fit
 
-#The Cholesky model's running time is 5 times slower than the direct-symmetric model's,
+#The Cholesky model's running time is >5 times slower than the direct-symmetric model's,
 #and that's ignoring the failed attempt(s) to fit the Cholesky!:
 cholRun$output$wallTime
 directVCRun$output$wallTime
