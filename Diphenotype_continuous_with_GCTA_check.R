@@ -118,7 +118,7 @@ plan <- mxComputeSequence(
 #(We will create a lot of objects inside the mxModel() statement.  This helps to save memory.)
 
 gremlmod <- mxModel(
-	"Diphenotype_Ordinal",
+	"Diphenotype_Continuous",
 	mxdat, #<--MxData object.
 	ge, #<--GREML expectation.
 	plan, #<--Custom compute plan.
