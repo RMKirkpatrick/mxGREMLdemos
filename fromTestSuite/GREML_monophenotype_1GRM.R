@@ -33,6 +33,8 @@ colnames(dat) <- c("y","x") #<--Column names
 #phenotype is has column label 'y' in the dataset, that the one covariate has column label 'x' in the dataset,
 #and that a lead column of ones needs to be appended to the 'X' matrix (for the intercept):
 ge <- mxExpectationGREML(V="V",yvars="y", Xvars="x", addOnes=T, REML=F)
+#^^^We will use ordinary rather than restricted maximum-likelihood, in order to enable comparison with 
+#the "diagonalized" specification of the model further below.
 
 #The GREML fitfunction tells OpenMx that the derivative of 'V' with respect to free parameter 
 #'va'(the additive-genetic variance) is a matrix named 'A', and that the derivative of 'V' w/r/t free parameter
