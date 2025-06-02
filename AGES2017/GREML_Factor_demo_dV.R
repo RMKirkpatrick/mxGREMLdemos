@@ -11,9 +11,7 @@
 
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
-#Note that NPSOL is not available in the CRAN build of OpenMx.
-#However, this script can be run with CSOLNP or SLSQP:
-mxOption(NULL,"Default optimizer","NPSOL")
+mxOption(NULL,"Default optimizer","CSOLNP")
 #More threads means faster running time, but at the cost of higher memory demand:
 mxOption(NULL,"Number of threads",2)
 mxOption(NULL,"Analytic Gradients","Yes")
@@ -98,7 +96,7 @@ casesToDrop <- gremldat$casesToDrop
 orv <- var(lm(gremldat$yX[,1] ~ gremldat$yX[,-1])$residual)
 
 
-# Create MxData object, expectation, fitfunction, and compute plan: ##########################################
+# Create MxData object, expectation, and fitfunction: ##########################################
 
 #The MxData object.  We will use gremldat$yX as the raw dataset to be used in our MxModel:
 mxdat <- mxData(observed=gremldat$yX,type="raw",sort=FALSE)
@@ -109,22 +107,10 @@ mxdat <- mxData(observed=gremldat$yX,type="raw",sort=FALSE)
 ge <- mxExpectationGREML(V="V",dataset.is.yX=TRUE,casesToDropFromV=casesToDrop)
 
 #We tell the GREML fitfunction the names of the first partial derivatives of 'V' w/r/t each free parameter:
-gff <- mxFitFunctionGREML(dV=c(l1="dV_dl1",l2="dV_dl2",l3="dV_dl3",va="dV_dva",vu1="dV_dvu1",
-															 vu2="dV_dvu2",vu3="dV_dvu3"))
-
-#Custom compute plan, to use Newton-Raphson and see what the optimizer is doing in real time (via the 
-# 'verbose' argument):
-plan <- mxComputeSequence(
-	steps=list(
-		mxComputeNewtonRaphson(verbose=5L),
-		mxComputeOnce('fitfunction', c('gradient','hessian')),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
-
+gff <- mxFitFunctionGREML(
+	dV=c(l1="dV_dl1",l2="dV_dl2",l3="dV_dl3",va="dV_dva",vu1="dV_dvu1",
+	vu2="dV_dvu2",vu3="dV_dvu3"),infoMatType="expected")
+#^^^Model-expected covariance matrix is not linear in the free parameters, so use `infoMatType="expected"`.
 
 
 # Create the MxModel: ################################################################################
@@ -135,7 +121,6 @@ factorMod <- mxModel(
 	mxdat,
 	ge,
 	gff,
-	plan,
 	#This will be our matrix of factor loadings:
 	mxMatrix(type="Full",nrow=3,ncol=1,free=T,values=sqrt(orv/2),
 					 labels=c("l1","l2","l3"),
@@ -207,7 +192,7 @@ factorMod <- mxModel(
 
 #Once the MxModel object has been created, we can delete objects in R's workspace which have been copied into the 
 #MxModel, or which we simply don't need anymore.  This saves memory:
-rm(GRM,ge,gff,gremldat,mxdat,grmstuff,plan)
+rm(GRM,ge,gff,gremldat,mxdat,grmstuff)
 #This tells R to do "garbage collection":
 gc()
 
@@ -216,40 +201,10 @@ factorRun <- mxRun(factorMod)
 object.size(factorRun) #<--How much memory does the fitted MxModel take up?:
 summary(factorRun)
 
-
-# Conditional re-run, using NPSOL: #######################################################################
-
-#This section of code should be run if the initial mxRun() call results in a status code 4 ("blue"), 
-#or 5 or 6 ("red").  What it does is re-run the MxModel, but with a different optimizer, NPSOL, and exploiting
-#as much as possible NPSOL's ability to use analytic fitfunction derivatives:
-if(factorRun$output$status$code > 1){
-	#This is what NPSOL's developers call a "warm start."  It's the upper-triangular Cholesky factor of the Hessian
-	#matrix, evaluated at the start values.  We are going to re-run the model again, starting at the values 
-	#Newton-Raphson reached, and we therefore have the Hessian matrix at the initial values.  The reason the warm
-	#start is useful that it tells NPSOL the curvature of the fitfunction surface at the initial values, which saves
-	#NPSOL the trouble of figuring that out numerically, which in turn cuts down on the number of necessary
-	#fitfunction evaluations:
-	ws <- chol(factorRun$output$hessian)
-	#We will stick a new compute plan in place of the old.  Notice that we're giving NPSOL the warm start, and telling it
-	#to use the analytic gradient.  That will help it reach a solution more quickly:
-	factorRun$compute <- mxComputeSequence(
-		steps=list(
-			mxComputeGradientDescent(engine = "NPSOL", verbose=5, warmStart = ws),
-			mxComputeOnce('fitfunction', c('gradient','hessian')),
-			mxComputeStandardError(),
-			mxComputeReportDeriv(),
-			mxComputeReportExpectation()
-		))
-	#Re-run and see summary:
-	factorRun <- mxRun(factorRun)
-	summary(factorRun)
-}
-#^^^Note:  If you need to use MxConstraint objects in a GREML model, you will not be able to use Newton-Raphson.
-#In such a case, use one of the gradient-based optimizers: NPSOL, SLSQP, or CSOLNP.  NPSOL/SLSQP will use the analytic 
-#first derivatives of the fitfunction w/r/t free parameters, and deal with the constraint functions numerically.
-
-
-
-
-
-
+#Note: This demo script used to use custom compute plans, with Newton-Raphson
+#for the primary optimization, and warm-started NPSOL if the primary
+#optimization did not converge.  Currently, use of Newton-Raphson and of warm-started
+#NPSOL are only recommended in general when the model-expected covariance matrix 'V' is 
+#linear in the free parameters, or equivalently, when the derivatives of 'V' are constant 
+#w/r/t free parameters.
+#(In the specific case of this particular script, Newton-Raphson does reach the same solution as CSOLNP, and does so more quickly.)

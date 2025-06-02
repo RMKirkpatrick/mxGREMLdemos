@@ -10,6 +10,9 @@
 
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
+mxOption(NULL,"Default optimizer","SLSQP")
+#With more threads, the job will run more quickly, but will require more memory:
+mxOption(NULL,"Number of Threads",2)
 require(mvtnorm)
 
 
@@ -29,7 +32,7 @@ colnames(dat) <- c("y","x") #<--Column names
 #The GREML expectation tells OpenMx that the model-expected covariance matrix is named 'V', that the one 
 #phenotype is has column label 'y' in the dataset, that the one covariate has column label 'x' in the dataset,
 #and that a lead column of ones needs to be appended to the 'X' matrix (for the intercept):
-ge <- mxExpectationGREML(V="V",yvars="y", Xvars="x", addOnes=T)
+ge <- mxExpectationGREML(V="V",yvars="y", Xvars="x", addOnes=T, REML=F)
 
 #The GREML fitfunction tells OpenMx that the derivative of 'V' with respect to free parameter 
 #'va'(the additive-genetic variance) is a matrix named 'A', and that the derivative of 'V' w/r/t free parameter
@@ -100,35 +103,32 @@ eigenA <- eigen(A) #<--Eigen decomposition of the GRM
 #eigenvectors of the GRM:
 yrot <- t(eigenA$vectors) %*% y
 xrot <- t(eigenA$vectors) %*% cbind(1,x)
-datrot <- cbind(yrot,xrot)
-colnames(datrot) <- c("y","x0","x1")
+datrot <- cbind(yrot,xrot,eigenA$values)
+colnames(datrot) <- c("y","x0","x1","EigVal")
 #Make a new MxModel:
 testmod2 <- mxModel(
 	"GREMLtest_1GRM_1trait_diagonalized",
 	mxData(observed = datrot, type="raw", sort=FALSE),
-	mxExpectationGREML(V="V",yvars="y", Xvars=c("x0","x1"), addOnes=F),
-	mxMatrix(type = "Full", nrow = 1, ncol=1, free=T, values = var(y)/2, labels = "ve", lbound = 0.0001, 
-					 name = "Ve"),
+	mxMatrix(
+		type = "Full", nrow = 1, ncol=1, free=T, values = var(y)/2, labels = "ve", lbound = 0.0001, 
+		name = "Ve"),
 	mxMatrix(type = "Full", nrow = 1, ncol=1, free=T, values = var(y)/2, labels = "va", name = "Va"),
-	mxMatrix("Iden",nrow=1000,name="I"),
-	mxMatrix("Diag",nrow=1000,free=F,values=eigenA$values,name="A"),
-	mxAlgebra((A%x%Va) + (I%x%Ve), name="V"),
+	mxMatrix(type="Full",nrow=1,ncol=1,free=T,values=mean(y),labels="b0",name="B0"),
+	mxMatrix(type="Full",nrow=1,ncol=1,free=T,values=0.1,labels="b1",name="B1"),
+	mxMatrix(type="Full",nrow=1,ncol=1,free=F,labels="data.EigVal",name="Eig"),
+	mxMatrix(type="Full",nrow=1,ncol=1,free=F,labels="data.x0",name="X0"),
+	mxMatrix(type="Full",nrow=1,ncol=1,free=F,labels="data.x1",name="X1"),
+	mxAlgebra(B0*X0 + B1*X1,name="Mu"),
+	mxAlgebra(Ve + Va*Eig,name="Sigma"),
+	mxExpectationNormal(covariance="Sigma",means="Mu",dimnames="y"),
+	mxFitFunctionML(),
 	mxAlgebra(Va/(Va+Ve), name="h2"),
-	gff,
-	#We'll do without the CI this time:
-	mxComputeSequence(steps=list(
-		mxComputeNewtonRaphson(),
-		mxComputeOnce('fitfunction', c('gradient','hessian')),
-		mxComputeStandardError(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
+	mxCI("h2")
 )
 
-testrun2 <- mxRun(testmod2)
+testrun2 <- mxRun(testmod2,intervals=T)
 #Results are substantially equivalent to those from the previous MxModel:
 summary(testrun2)
-mxEval(h2,testrun2,T)
 
 # Reparametrize the problem in terms of total variance and heritability: ###
 
@@ -175,5 +175,5 @@ testrun3 <- mxRun(testmod3, intervals = T)
 summary(testrun3)
 
 #Compare:
-mxEval(h2,testrun3,T)[1,1] + 2*c(-0.07824315,0.07824315) #<--0.07824315 is the SE of h2
+mxEval(h2,testrun3,T)[1,1] + 2*c(-0.07866897,0.07866897) #<--0.07866897 is the SE of h2
 testrun3$output$confidenceIntervals

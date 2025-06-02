@@ -15,7 +15,7 @@ set.seed(180114)
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
-mxOption(NULL,"Default optimizer","SLSQP")
+mxOption(NULL,"Default optimizer","CSOLNP")
 mxOption(NULL,"Nudge zero starts","No")
 
 #Number of simulees (participants):
@@ -42,14 +42,18 @@ for(mi in 1:msnps){
 	#print(mi)
 }
 GRM <- snps%*%t(snps) / msnps #<--#Calculate GRM from SNPs.
-ev <- eigen(GRM,symmetric=T) #<--Eigen-decompose the GRM.
 
-#If you don't care whether or not the GRM is positive-definite, you can comment out this part.  It "bends" the GRM to the nearest 
-#(in a least-squares sense) positive-definite matrix:
-if(!all(ev$values > .Machine$double.eps)){
-	GRM <- as.matrix(nearPD(GRM)$mat)
+#If you don't care whether or not the GRM is positive-definite, you can change the `if(1)` below to `if(0)`.
+#The part inside the curly braces "bends" the GRM to the nearest (in a least-squares sense) positive-definite matrix:
+if(1){
+	ev <- eigen(GRM,symmetric=T,only.values=T) #<--Eigen-decompose the GRM.
+	if(!all(ev$values > .Machine$double.eps)){
+		GRM <- as.matrix(nearPD(GRM)$mat)
+	}
+	rm(ev)
 }
-rm(snps, ev); gc()
+
+rm(snps); gc()
 
 #Simulate data:
 m <- runif(n=N)
@@ -105,10 +109,15 @@ gremlmod <- mxModel(
 	mxAlgebra( (A0^2)%x%A + (A0*A1)%x%LambdaA + (A1^2)%x%GammaA + vec2diag(Uno%x%E0^2) + vec2diag(K1d%x%(E0*E1)) + vec2diag(K2d%x%(E1^2)),
 						 name="V" ),
 	
-	mxFitFunctionGREML()
+	#Model-expected covariance matrix is not linear in the free parameters, so use `infoMatType="expected"`:
+	mxFitFunctionGREML(infoMatType="expected")
 )
 rm(Gamma,GammaGRM,GRM,K1,K2,Lambda,LambdaGRM); gc()
-gremlmod <- mxRun(gremlmod)
+#We're using an implicit model for the phenotypic mean, 
+#and we don't have good start values for 'a1' or 'e1', 
+#so let's get some help from `mxAutoStart()`:
+gremlmod <- mxAutoStart(gremlmod)
+gremlmod <- mxRun(gremlmod) 
 gc()
 object.size(gremlmod) #<--How much memory does the fitted MxModel take up?:
 

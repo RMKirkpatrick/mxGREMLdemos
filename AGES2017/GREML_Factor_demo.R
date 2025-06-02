@@ -11,7 +11,7 @@
 
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
-mxOption(NULL,"Default optimizer","SLSQP")
+mxOption(NULL,"Default optimizer","CSOLNP")
 #More threads means faster running time, but at the cost of higher memory demand:
 mxOption(NULL,"Number of threads",2)
 #You need to set R's working directory to the directory containing the data files for this demo.
@@ -136,8 +136,10 @@ factorMod <- mxModel(
 	mxAlgebra( Lambda%*%t(Lambda), name="LamLamT"),
 	#The model-expected covariance matrix, per the Fundamental Theorem of Factor Analysis:
 	mxAlgebra(LamLamT%x%SigmaFac + vec2diag(Vu), name="V"),
-	mxFitFunctionGREML()
+	#Model-expected covariance matrix is not linear in the free parameters, so use `infoMatType="expected"`:
+	mxFitFunctionGREML(infoMatType="expected")
 )
+
 
 #Once the MxModel object has been created, we can delete objects in R's workspace which have been copied into the 
 #MxModel, or which we simply don't need anymore.  This saves memory:

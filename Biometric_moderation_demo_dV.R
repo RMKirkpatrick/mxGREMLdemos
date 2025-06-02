@@ -15,6 +15,7 @@ set.seed(180114)
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
+mxOption(NULL,"Default optimizer","CSOLNP")
 mxOption(NULL,"Nudge zero starts","No")
 
 #Number of simulees (participants):
@@ -41,14 +42,18 @@ for(mi in 1:msnps){
 	#print(mi)
 }
 GRM <- snps%*%t(snps) / msnps #<--#Calculate GRM from SNPs.
-ev <- eigen(GRM,symmetric=T) #<--Eigen-decompose the GRM.
 
-#If you don't care whether or not the GRM is positive-definite, you can comment out this part.  It "bends" the GRM to the nearest 
-#(in a least-squares sense) positive-definite matrix:
-if(!all(ev$values > .Machine$double.eps)){
-	GRM <- as.matrix(nearPD(GRM)$mat)
+#If you don't care whether or not the GRM is positive-definite, you can change the `if(1)` below to `if(0)`.
+#The part inside the curly braces "bends" the GRM to the nearest (in a least-squares sense) positive-definite matrix:
+if(1){
+	ev <- eigen(GRM,symmetric=T,only.values=T) #<--Eigen-decompose the GRM.
+	if(!all(ev$values > .Machine$double.eps)){
+		GRM <- as.matrix(nearPD(GRM)$mat)
+	}
+	rm(ev)
 }
-rm(snps, ev); gc()
+
+rm(snps); gc()
 
 #Simulate data:
 m <- runif(n=N)
@@ -86,28 +91,16 @@ her <- lm(hey~hex)$coefficients[2]
 
 
 #Options to set if you are going to use NPSOL to verify analytic derivatives:
+# mxOption(NULL,"Default optimizer","NPSOL")
 # mxOption(NULL,"Print level",20)
 # mxOption(NULL,"Print file",2)
 # mxOption(NULL,"Verify level",3)
 # mxOption(NULL,"Function precision",1e-7)
 
-#Compute plan; uses Newton-Raphson; fast, but not very robust:
-plan <- mxComputeSequence(
-	steps=list(
-		mxComputeNewtonRaphson(verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
-		mxComputeOnce("fitfunction", c("gradient","hessian")),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 
 #GREML model:
 gremlmod <- mxModel(
 	"GREML",
-	plan,
 	mxData(cbind(y=y,m=m),type="raw",sort=FALSE),
 	mxExpectationGREML(V="V",yvars="y",Xvars="m"),
 	mxMatrix(type="Full",nrow=1,ncol=1,free=T,values=sqrt(her),labels="a0",name="A0"),
@@ -129,44 +122,15 @@ gremlmod <- mxModel(
 	mxAlgebra( A0%x%LambdaA + (2*A1)%x%GammaA, name="dV_da1"),
 	mxAlgebra( vec2diag(Uno%x%(2*E0)) + vec2diag(K1d%x%E1), name="dV_de0"),
 	mxAlgebra( vec2diag(K1d%x%E0) + vec2diag(K2d%x%(2*E1)), name="dV_de1"),
-	
-	mxFitFunctionGREML(dV=c(a0="dV_da0", a1="dV_da1", e0="dV_de0", e1="dV_de1"))
+	#Model-expected covariance matrix is not linear in the free parameters, so use `infoMatType="expected"`:
+	mxFitFunctionGREML(dV=c(a0="dV_da0", a1="dV_da1", e0="dV_de0", e1="dV_de1"),infoMatType="expected")
 )
-rm(Gamma,GammaGRM,GRM,K1,K2,Lambda,LambdaGRM,plan); gc()
+rm(Gamma,GammaGRM,GRM,K1,K2,Lambda,LambdaGRM); gc()
+#We're using an implicit model for the phenotypic mean, 
+#and we don't have good start values for 'a1' or 'e1', 
+#so let's get some help from `mxAutoStart()`:
+gremlmod <- mxAutoStart(gremlmod)
 gremlmod <- mxRun(gremlmod)
 gc()
 object.size(gremlmod) #<--How much memory does the fitted MxModel take up?:
-
-#If Newton-Raphson doesn't reach a good solution, try again with (possibly warm-started) NPSOL :
-if( !(gremlmod$output$status$code %in% c(0,1)) ){
-	ws <- try(chol(gremlmod$output$hessian))
-	if("try-error" %in% class(ws)){ws <- NULL}
-	gremlmod$compute <- mxComputeSequence(steps=list(
-		mxComputeGradientDescent(engine="NPSOL",verbose=5L,warmStart=ws),
-		mxComputeOnce('fitfunction', c('gradient','hessian')),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-	#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
-	gremlmod <- mxRun(gremlmod)
-	gc()
-}
-
-#If NPSOL doesn't reach a good solution, try again with SLSQP:
-if( !(gremlmod$output$status$code %in% c(0,1)) ){
-	gremlmod$compute <- mxComputeSequence(steps=list(
-		mxComputeGradientDescent(engine="SLSQP",verbose=5L),
-		mxComputeOnce('fitfunction', c('gradient','hessian')),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-	#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
-	gremlmod <- mxRun(gremlmod)
-	gc()
-}
-
 summary(gremlmod,verbose=T)

@@ -9,7 +9,8 @@ library(mvtnorm)
 library(Matrix)
 library(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)
-mxOption(NULL,"Default optimizer","SLSQP")
+#mxOption(NULL,"Default optimizer","SLSQP")
+mxOption(NULL,"Default optimizer","CSOLNP")
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
@@ -92,11 +93,14 @@ for(mi in 1:msnps){
 GRM <- snps%*%t(snps) / msnps #<--#Calculate GRM from SNPs.
 ev <- eigen(GRM,symmetric=T) #<--Eigen-decompose the GRM.
 
-#If you don't care whether or not the GRM is positive-definite, you can comment out this part.  It "bends" the GRM to the nearest 
-#(in a least-squares sense) positive-definite matrix, and then eigen-decomposes it again:
-if(!all(ev$values > .Machine$double.eps)){
-	GRM <- as.matrix(nearPD(GRM)$mat)
-	ev <- eigen(GRM,symmetric=T)
+#If you don't care whether or not the GRM is positive-definite, you can change the `if(1)` below to `if(0)`.
+#`nearPD()` "bends" the GRM to the nearest (in a least-squares sense) positive-definite matrix; then, the GRM
+#is eigen-decomposed again:
+if(1){
+	if(!all(ev$values > .Machine$double.eps)){
+		GRM <- as.matrix(nearPD(GRM)$mat)
+		ev <- eigen(GRM,symmetric=T)
+	}
 }
 
 rm(snps); gc() 
@@ -108,7 +112,9 @@ A1 <- as.vector(z2mvnorm(rnorm(N),ev,truevals["vau1"]))
 A2 <- as.vector(z2mvnorm(rnorm(N),ev,truevals["vau2"]))
 A3 <- as.vector(z2mvnorm(rnorm(N),ev,truevals["vau3"]))
 A4 <- as.vector(z2mvnorm(rnorm(N),ev,truevals["vau4"]))
+
 rm(ev); gc()
+
 Ec <- rnorm(N)
 E1 <- rnorm(N,sd=sqrt(truevals["veu1"]))
 E2 <- rnorm(N,sd=sqrt(truevals["veu2"]))
@@ -146,6 +152,7 @@ xpec <- mxExpectationGREML(V="V",yvars=c("y1","y2","y3","y4"),Xvars=list(c("x1",
 ipmod <- mxModel(
 	"IndePathway",
 	xpec,
+	#plan,
 	#sort=FALSE is CRITICALLY IMPORTANT!  It turns off OpenMx's automatic sorting of data rows.
 	#We don't want to rearrange the rows, because they are already aligned with the rows and columns of the GRM:
 	mxData(observed=widedata,type="raw",sort=FALSE),
@@ -195,9 +202,14 @@ ipmod <- mxModel(
 )
 rm(GRM); gc()
 
+#`mxAutoStart()` happens to be VERY helpful toward optimizing this demo script's model!:
+ipmod_as <- mxAutoStart(ipmod)
+ipmod <- omxSetParameters(ipmod,labels=names(coef(ipmod_as)),values=coef(ipmod_as))
+rm(ipmod_as); gc()
 #Clobbering the unfitted MxModel with the fitted MxModel object will NOT reduce peak memory demand, but it will allow R to free more memory
 #after the call to mxRun() is complete:
 ipmod <- mxRun(ipmod)
+
 object.size(ipmod) #<--How much memory does the fitted MxModel take up?:
 summary(ipmod,verbose=T)
 coef(ipmod); truevals

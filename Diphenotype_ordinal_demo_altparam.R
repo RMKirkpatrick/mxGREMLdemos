@@ -8,6 +8,8 @@ library(mvtnorm)
 library(Matrix)
 library(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)
+mxOption(NULL,"Default optimizer","CSOLNP")
+#^^^(In the specific case of this particular script, SLSQP reaches in 1 attempt the same solution as CSOLNP, and does so more quickly.)
 set.seed(171216)
 
 #With more threads, the job will run more quickly, but will require more memory:
@@ -54,15 +56,18 @@ for(mi in 1:msnps){
 	#print(mi)
 }
 GRM <- snps%*%t(snps) / msnps #<--#Calculate GRM from SNPs.
-ev <- eigen(GRM,symmetric=T) #<--Eigen-decompose the GRM.
 
-#If you don't care whether or not the GRM is positive-definite, you can comment out this part.  It "bends" the GRM to the nearest 
-#(in a least-squares sense) positive-definite matrix:
-if(!all(ev$values > .Machine$double.eps)){
-	GRM <- as.matrix(nearPD(GRM)$mat)
+#If you don't care whether or not the GRM is positive-definite, you can change the `if(1)` below to `if(0)`.
+#The part inside the curly braces "bends" the GRM to the nearest (in a least-squares sense) positive-definite matrix:
+if(1){
+	ev <- eigen(GRM,symmetric=T,only.values=T) #<--Eigen-decompose the GRM.
+	if(!all(ev$values > .Machine$double.eps)){
+		GRM <- as.matrix(nearPD(GRM)$mat)
+	}
+	rm(ev)
 }
-#Free some memory:
-rm(snps, ev); gc()
+
+rm(snps); gc()
 
 #Covariance matrix for genetic liabilities:
 varglat <- rbind(
@@ -159,30 +164,18 @@ gremldat <- mxGREMLDataHandler(data=widedata,yvars=c("y1","y2"),blockByPheno=TRU
 head(gremldat$yX)
 
 #Options for verifying analytic derivatives with NPSOL:
+# mxOption(NULL,"Default optimizer","NPSOL")
 # mxOption(NULL,"Print level",20)
 # mxOption(NULL,"Print file",1)
 # mxOption(NULL,"Verify level",3)
 # mxOption(NULL,"Function precision",1e-7)
 
-#Custom compute plan:
-plan <- mxComputeSequence(
-	steps=list(
-		mxComputeGradientDescent(engine="SLSQP",verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
-		mxComputeOnce("fitfunction", c("gradient","hessian")),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-))
-#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 
 #mxGREML model:
 gremlmod <- mxModel(
 	"Diphenotype_Ordinal",
 	mxExpectationGREML(V="V",dataset.is.yX=TRUE),
 	mxData(observed=gremldat$yX, type="raw", sort=F),
-	plan,
 	#Trait 1's latent-scale heritability:
 	mxMatrix(type="Full",nrow=1,ncol=1,free=T,values=her1*var(y1obs,na.rm=T)/k1,labels="h2lat1",lbound=0,ubound=0.9999,name="H2lat1"),
 	#Trait 2's latent-scale heritability:
@@ -256,11 +249,17 @@ gremlmod <- mxModel(
 			cbind(vec2diag(Uno%x%(sqrt(Vp1-H2lat1*Konv1)*sqrt(Vp2-H2lat2*Konv2))), Zip)), 
 		name="dV_dre"),
 	
-	mxFitFunctionGREML(dV=c(h2lat1="dV_dh2lat1",h2lat2="dV_dh2lat2",vp1="dV_dvp1",vp2="dV_dvp2",ra="dV_dra",re="dV_dre"))
+	mxFitFunctionGREML(dV=c(h2lat1="dV_dh2lat1",h2lat2="dV_dh2lat2",vp1="dV_dvp1",vp2="dV_dvp2",ra="dV_dra",re="dV_dre"),infoMatType="expected")
 
 )
 #Free some memory:
 rm(GRM,widedata,gremldat,plan); gc()
+#`mxAutoStart()` happens to be VERY helpful toward optimizing this demo script's model!:
+gremlmod_as <- mxAutoStart(gremlmod)
+gremlmod <- omxSetParameters(gremlmod,labels=names(coef(gremlmod_as)),values=coef(gremlmod_as))
+rm(gremlmod_as); gc()
+#Clobbering the unfitted MxModel with the fitted MxModel object will NOT reduce peak memory demand, but it will allow R to free more memory
+#after the call to mxRun() is complete:
 gremlmod <- mxRun(gremlmod)
 gc()
 #See results:

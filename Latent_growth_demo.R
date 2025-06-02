@@ -9,7 +9,7 @@ library(Matrix)
 library(OpenMx)
 library(lme4)
 options(mxCondenseMatrixSlots=TRUE)
-mxOption(NULL,"Default optimizer","SLSQP")
+mxOption(NULL,"Default optimizer","CSOLNP")
 set.seed(210930)
 
 #With more threads, the job will run more quickly, but will require more memory:
@@ -46,15 +46,18 @@ for(mi in 1:msnps){
 	#print(mi)
 }
 GRM <- snps%*%t(snps) / msnps #<--#Calculate GRM from SNPs.
-ev <- eigen(GRM,symmetric=T) #<--Eigen-decompose the GRM.
 
-#If you don't care whether or not the GRM is positive-definite, you can comment out this part.  It "bends" the GRM to the nearest 
-#(in a least-squares sense) positive-definite matrix:
-if(!all(ev$values > .Machine$double.eps)){
-	GRM <- as.matrix(nearPD(GRM)$mat)
+#If you don't care whether or not the GRM is positive-definite, you can change the `if(1)` below to `if(0)`.
+#The part inside the curly braces "bends" the GRM to the nearest (in a least-squares sense) positive-definite matrix:
+if(1){
+	ev <- eigen(GRM,symmetric=T,only.values=T) #<--Eigen-decompose the GRM.
+	if(!all(ev$values > .Machine$double.eps)){
+		GRM <- as.matrix(nearPD(GRM)$mat)
+	}
+	rm(ev)
 }
 
-rm(snps,ev); gc()
+rm(snps); gc()
 
 #Age (the time metric), centered at expected wave-3 age:
 age1 <- round(9 + runif(N,-0.25,0.25) - 13, 2)

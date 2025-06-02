@@ -1,8 +1,11 @@
 # Copyright 2019-2025 by Robert M. Kirkpatrick
 # Licensed under CC BY 4.0 <http://creativecommons.org/licenses/by/4.0/>
 
+### This demo script has been deprecated in favor of ./Analytic_vs_semianalyt_vs_numeric_comparison.R . #############
+
 #This script fits the AGES2017 factor model twice--once with numeric derivatives and once with analytic derivatives.
-#The two results are substantially equivalent.
+#The two results are substantially equivalent.  However, the comparison is somewhat confounded in that the two models
+#are fitted using different optimizers.
 
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory

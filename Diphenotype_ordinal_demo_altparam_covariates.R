@@ -9,7 +9,8 @@ library(mvtnorm)
 library(Matrix)
 library(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)
-set.seed(171216)
+mxOption(NULL,"Default optimizer","CSOLNP")
+set.seed(2506010)
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
@@ -55,15 +56,18 @@ for(mi in 1:msnps){
 	#print(mi)
 }
 GRM <- snps%*%t(snps) / msnps #<--#Calculate GRM from SNPs.
-ev <- eigen(GRM,symmetric=T) #<--Eigen-decompose the GRM.
 
-#If you don't care whether or not the GRM is positive-definite, you can comment out this part.  It "bends" the GRM to the nearest 
-#(in a least-squares sense) positive-definite matrix:
-if(!all(ev$values > .Machine$double.eps)){
-	GRM <- as.matrix(nearPD(GRM)$mat)
+#If you don't care whether or not the GRM is positive-definite, you can change the `if(1)` below to `if(0)`.
+#The part inside the curly braces "bends" the GRM to the nearest (in a least-squares sense) positive-definite matrix:
+if(1){
+	ev <- eigen(GRM,symmetric=T,only.values=T) #<--Eigen-decompose the GRM.
+	if(!all(ev$values > .Machine$double.eps)){
+		GRM <- as.matrix(nearPD(GRM)$mat)
+	}
+	rm(ev)
 }
-#Free some memory:
-rm(snps, ev); gc()
+
+rm(snps); gc()
 
 #Covariance matrix for genetic liabilities:
 varglat <- rbind(
@@ -173,6 +177,7 @@ gremldat <- mxGREMLDataHandler(data=widedata,yvars=c("y1","y2"),Xvars=list(c("x1
 head(gremldat$yX)
 
 #Options for verifying analytic derivatives with NPSOL:
+# mxOption(NULL,"Default optimizer","NPSOL")
 # mxOption(NULL,"Print level",20)
 # mxOption(NULL,"Print file",1)
 # mxOption(NULL,"Verify level",3)
@@ -181,22 +186,23 @@ head(gremldat$yX)
 #Custom compute plan:
 plan <- mxComputeSequence(
 	steps=list(
-		mxComputeGradientDescent(engine="SLSQP",verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
-		mxComputeOnce("fitfunction", c("gradient","hessian")),
+		#Let's monitor the backend's progress with `verbose=5L`:
+		mxComputeGradientDescent(engine="CSOLNP",verbose=5L),
+		mxComputeOnce("fitfunction", c("gradient","hessian"),verbose=5L),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
 		mxComputeReportDeriv(),
 		mxComputeReportExpectation()
-))
+	))
 #^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
+
 
 #mxGREML model:
 gremlmod <- mxModel(
 	"Diphenotype_Ordinal",
+	plan,
 	mxExpectationGREML(V="V",dataset.is.yX=TRUE),
 	mxData(observed=gremldat$yX, type="raw", sort=F),
-	plan,
 	#Trait 1's latent-scale heritability:
 	mxMatrix(type="Full",nrow=1,ncol=1,free=T,
 					 values=her1*vp1.ini/k1,
@@ -274,11 +280,10 @@ gremlmod <- mxModel(
 			cbind(vec2diag(Uno%x%(sqrt(Vp1-H2lat1*Konv1)*sqrt(Vp2-H2lat2*Konv2))), Zip)), 
 		name="dV_dre"),
 	
-	mxFitFunctionGREML(dV=c(h2lat1="dV_dh2lat1",h2lat2="dV_dh2lat2",vp1="dV_dvp1",vp2="dV_dvp2",ra="dV_dra",re="dV_dre"))
-
+	mxFitFunctionGREML(dV=c(h2lat1="dV_dh2lat1",h2lat2="dV_dh2lat2",vp1="dV_dvp1",vp2="dV_dvp2",ra="dV_dra",re="dV_dre"),infoMatType="expected")
 )
 #Free some memory:
-rm(GRM,widedata,gremldat,plan); gc()
+rm(GRM,widedata,gremldat); gc()
 gremlmod <- mxRun(gremlmod)
 gc()
 #See results:
@@ -286,8 +291,7 @@ summary(gremlmod, verbose=T)
 gremlmod$output$fit
 gremlmod$output$gradient
 gremlmod$output$hessian
-yhat <- mxGetExpected(gremlmod,"means")
-RE1 <- gremlmod$data$observed[1:N,"y"] - yhat[1:N]
+RE1 <- gremlmod$expectation$residuals[1:N]
 qqnorm(RE1); qqline(RE1)
-RE2 <- gremlmod$data$observed[(N+1):(2*N),"y"] - yhat[(N+1):(2*N)]
+RE2 <- gremlmod$expectation$residuals[(N+1):(2*N)]
 qqnorm(RE2); qqline(RE2)

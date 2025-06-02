@@ -9,9 +9,14 @@
 #fits a simple GREML model to estimate additive-genetic variance, residual variance, and heritability.
 #The GRM is 500x500, and was computed from 50,000 simulated SNPs in linkage equilibrium.
 
+#Note: this script does deviate from recommended practice by using Newton-Raphson with the average-information matrix
+#when the model's covariance matrix is not linear in the free parameters.
+
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
 mxOption(NULL,"Analytic Gradients","Yes") #<--"Yes" is the on-load default.
+#With more threads, the job will run more quickly, but will require more memory:
+mxOption(NULL,"Number of Threads",2)
 #You need to set R's working directory to the directory containing the data files for this demo.
 #(i.e., YOU MUST CHANGE THE NEXT LINE TO REFLECT WHERE, ON YOUR COMPUTER, YOU'VE PLACED THE DATA FILES):
 setwd("./AGES2017/data")
@@ -112,6 +117,7 @@ gff <- mxFitFunctionGREML(
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
+		#mxComputeGradientDescent(engine="CSOLNP",verbose=5L),
 		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
@@ -208,6 +214,7 @@ summary(factorRun)
 ## Now, we fit an unstructured model, using direct-symmetric parameterization.  ##############################
 # This is the most "saturated" model we could fit in this context.
 
+# mxOption(NULL,"Default optimizer","NPSOL")
 #The next two options together tell NPSOL to write a log entry for each of its major iterations to a file in   
 #the working directory, called 'fort.2' (change the value of "Print file" option to a different positive integer to change the extension 
 #to 'fort'):
@@ -221,6 +228,7 @@ summary(factorRun)
 
 #NPSOL's default function precision is usually too strict for GREML:
 # mxOption(NULL,"Function precision",1e-7)
+
 plan <- mxComputeSequence(
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
@@ -498,11 +506,12 @@ cholMod <- mxModel(
 			e11="dV_de11",e12="dV_de12",e13="dV_de13",e22="dV_de22",e23="dV_de23",e33="dV_de33"))
 )
 cholRun <- mxRun(cholMod)
+#^^^Newton-Raphson didn't converge.  Notice that covariance matrix 'V' is no longer linear in the
+#free parameters, as it was for the previous 2 MxModels.
 
 if(cholRun$output$status$code > 1){
 	cholRun$compute <- mxComputeSequence(
 		steps=list(
-			#mxComputeGradientDescent(engine="NPSOL", verbose=5L),
 			mxComputeGradientDescent(engine="CSOLNP", verbose=5L),
 			mxComputeOnce('fitfunction', c('gradient','hessian')),
 			mxComputeStandardError(),

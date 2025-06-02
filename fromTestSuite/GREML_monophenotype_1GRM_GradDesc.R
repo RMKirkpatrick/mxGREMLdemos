@@ -11,6 +11,8 @@
 
 require(OpenMx)
 mxOption(NULL,"Default optimizer","SLSQP")
+#With more threads, the job will run more quickly, but will require more memory:
+mxOption(NULL,"Number of Threads",2)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
 require(mvtnorm)
 
@@ -31,7 +33,7 @@ colnames(dat) <- c("y","x") #<--Column names
 #The GREML expectation tells OpenMx that the model-expected covariance matrix is named 'V', that the one 
 #phenotype is has column label 'y' in the dataset, that the one covariate has column label 'x' in the dataset,
 #and that a lead column of ones needs to be appended to the 'X' matrix (for the intercept):
-ge <- mxExpectationGREML(V="V",yvars="y", Xvars="x", addOnes=T)
+ge <- mxExpectationGREML(V="V",yvars="y", Xvars="x", addOnes=T,REML=F)
 
 #The GREML fitfunction object:
 gff <- mxFitFunctionGREML()

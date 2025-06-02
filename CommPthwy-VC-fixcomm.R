@@ -9,7 +9,8 @@ library(mvtnorm)
 library(Matrix)
 library(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)
-mxOption(NULL,"Default optimizer","SLSQP")
+mxOption(NULL,"Default optimizer","CSOLNP")
+#^^^(In the specific case of this particular script, SLSQP reaches in 1 attempt the same solution as CSOLNP, and does so more quickly.)
 #mxOption(NULL,"Analytic Gradients","No")
 
 #With more threads, the job will run more quickly, but will require more memory:
@@ -59,11 +60,14 @@ for(mi in 1:msnps){
 GRM <- snps%*%t(snps) / msnps #<--#Calculate GRM from SNPs.
 ev <- eigen(GRM,symmetric=T) #<--Eigen-decompose the GRM.
 
-#If you don't care whether or not the GRM is positive-definite, you can comment out this part.  It "bends" the GRM to the nearest 
-#(in a least-squares sense) positive-definite matrix, and then eigen-decomposes it again:
-if(!all(ev$values > .Machine$double.eps)){
-	GRM <- as.matrix(nearPD(GRM)$mat)
-	ev <- eigen(GRM,symmetric=T)
+#If you don't care whether or not the GRM is positive-definite, you can change the `if(1)` below to `if(0)`.
+#`nearPD()` "bends" the GRM to the nearest (in a least-squares sense) positive-definite matrix; then, the GRM
+#is eigen-decomposed again:
+if(1){
+	if(!all(ev$values > .Machine$double.eps)){
+		GRM <- as.matrix(nearPD(GRM)$mat)
+		ev <- eigen(GRM,symmetric=T)
+	}
 }
 
 rm(snps); gc() 

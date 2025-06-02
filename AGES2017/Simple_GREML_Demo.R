@@ -94,13 +94,15 @@ mxdat <- mxData(observed=gremldat$yX, type="raw", sort=FALSE)
 #sorting!
 
 #We  tell the GREML espectation that the name of the model-expected covariance matrix is "V", and that the dataset
-#being input is y horizontally adhered to X (and therefore, it should not call the data-handler at runtime):
-ge <- mxExpectationGREML(V="V",dataset.is.yX=TRUE)
+#being input is y horizontally adhered to X (and therefore, it should not call the data-handler at runtime),
+#and that we will fit the model via ordinary rather than restricted maximum-likelihood (in order to facilitate 
+#comparison with a null model, at the end of the script):
+ge <- mxExpectationGREML(V="V",dataset.is.yX=TRUE,REML=FALSE)
 #^^^Note: mxExpectationGREML() has argument 'casesToDropFromV', to which we could have passed 
 #gremldat$casesToDrop.  In that case, we could define our covariance matrix and its derivatives as 
 #full-size NxN matrices, and allow the backend to use the value of 'casesToDropFromV' to automatically 
 #trim rows and columns in those matrices that correspond to missing observations (i.e., participants #7 and #77).
-#However, that backend  matrix-resizing process carries a performance cost.
+#However, that backend matrix-resizing process carries a performance cost.
 
 #The GREML fitfunction tells OpenMx that the derivative of 'V' with respect to free parameter 
 # 'va'(the additive-genetic variance) is a matrix named 'A', and that the derivative of 'V' w/r/t free parameter
@@ -115,13 +117,16 @@ plan <- mxComputeSequence(
 	#display what it's doing in real time (via the verbose argument):
 	steps=list(
 		mxComputeNewtonRaphson(verbose=5L),
+		#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 		mxComputeOnce("fitfunction", c("gradient","hessian")),
 		mxComputeStandardError(),
 		mxComputeHessianQuality(),
 		mxComputeReportDeriv(),
 		mxComputeReportExpectation()
 ))
-#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
+#^^^Note:  If you need to use MxConstraint objects in a GREML model, you will not be able to use Newton-Raphson.
+#In such a case, use one of the gradient-based optimizers: NPSOL, SLSQP, or CSOLNP.  They will use the analytic 
+#first derivatives of the fitfunction w/r/t free parameters, and deal with the constraint functions numerically.
 
 
 # Create the MxModel, and run it: ###############################################################################
@@ -167,11 +172,9 @@ h2se <- sqrt(
 	))
 print(h2se)
 
-#What follows is a somewhat questionable likelihood-ratio test of the null hypothesis that the genetic variance is zero.
-#It's questionable because the "full" model was fitted by restricted ML, but the "reduced" model was fitted by OLS, and 
-#OLS is equivalent to ordinary ML (provided that the #errors are IID normal with expectation zero).  We use the "full" model's
-#ordinary ML fitfunction value, but that's not the exact fitfunction that was optimized to fit it.
-#The rationale is that, if there is no genetic variance, then our model reduces to an OLS regression of the phenotype onto the covariate:
+#What follows is a likelihood-ratio test of the null hypothesis that the genetic variance is zero.
+#If there is no genetic variance, then our model reduces to an OLS regression of the phenotype onto the covariate
+#(and OLS is equivalent to ordinary ML provided that the errors are IID normal with expectation zero and constant variance):
 lmod <- lm(y~x,data=as.data.frame(gremldat$yX))
 #Obtain a likelihood-ratio test statistic:
 LRT <- as.numeric(-2*logLik(lmod) - testrun$fitfunction$MLfit)

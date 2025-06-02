@@ -14,6 +14,7 @@
 
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
+mxOption(NULL,"Default optimizer","CSOLNP")
 #More threads means faster running time, but at the cost of higher memory demand:
 mxOption(NULL,"Number of threads",2)
 #You need to set R's working directory to the directory containing the data files for this demo.
@@ -210,19 +211,19 @@ if(cmd==0){ #<--If the above call to system() did not end in an error.
 	#Read in GCTA output file:
 	hsq <- read.table("diph.hsq",header=T,nrows=11)
 	#OpenMx & GCTA point estimates of variance components are close:
-	coef(gremlmod); hsq[1:6,2]
+	print(coef(gremlmod)); print(hsq[1:6,2])
 	#OpenMx & GCTA standard errors of variance components are close:
-	gremlmod$output$standardErrors; hsq[1:6,3]
+	print(gremlmod$output$standardErrors); print(hsq[1:6,3])
 	#OpenMx's & GCTA's heritability estimates and their SEs are close:
-	c(mxEval(h2_1,gremlmod,T), mxSE(h2_1,gremlmod)); hsq[9,]
-	c(mxEval(h2_2,gremlmod,T), mxSE(h2_2,gremlmod)); hsq[10,]
+	print(c(mxEval(h2_1,gremlmod,T), mxSE(h2_1,gremlmod))); print(hsq[9,])
+	print(c(mxEval(h2_2,gremlmod,T), mxSE(h2_2,gremlmod))); print(hsq[10,])
 	#OpenMx's & GCTA's genetic correlation estimates SEs are close:
-	c(mxEval(rg,gremlmod,T), mxSE(rg,gremlmod)); hsq[11,]
+	print(c(mxEval(rg,gremlmod,T), mxSE(rg,gremlmod))); print(hsq[11,])
 	
 	#The mxGREML fitfunction reports -2 times the natural logarithm of the normalized likelihood:
-	gremlmod$output$fit
+	print(gremlmod$output$fit)
 	#To compare OpenMx's & GCTA's -2logLs at the solution, we need to add the normalizing constant to the value GCTA
 	#reports, -5449.22, and then multiply by -2:
-	-2*(-5449.22 - 0.5*gremlsumm$observedStatistics*log(2*pi))
+	print(-2*(-5449.22 - 0.5*gremlsumm$observedStatistics*log(2*pi)))
 	#^^^They match.
 }

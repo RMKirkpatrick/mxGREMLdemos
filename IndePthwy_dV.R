@@ -9,6 +9,7 @@ library(mvtnorm)
 library(Matrix)
 library(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)
+#mxOption(NULL,"Default optimizer","CSOLNP")
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
@@ -105,11 +106,14 @@ for(mi in 1:msnps){
 GRM <- snps%*%t(snps) / msnps #<--#Calculate GRM from SNPs.
 ev <- eigen(GRM,symmetric=T) #<--Eigen-decompose the GRM.
 
-#If you don't care whether or not the GRM is positive-definite, you can comment out this part.  It "bends" the GRM to the nearest 
-#(in a least-squares sense) positive-definite matrix, and then eigen-decomposes it again:
-if(!all(ev$values > .Machine$double.eps)){
-	GRM <- as.matrix(nearPD(GRM)$mat)
-	ev <- eigen(GRM,symmetric=T)
+#If you don't care whether or not the GRM is positive-definite, you can change the `if(1)` below to `if(0)`.
+#`nearPD()` "bends" the GRM to the nearest (in a least-squares sense) positive-definite matrix; then, the GRM
+#is eigen-decomposed again:
+if(1){
+	if(!all(ev$values > .Machine$double.eps)){
+		GRM <- as.matrix(nearPD(GRM)$mat)
+		ev <- eigen(GRM,symmetric=T)
+	}
 }
 
 rm(snps); gc() 
@@ -121,7 +125,9 @@ A1 <- as.vector(z2mvnorm(rnorm(N),ev,truevals["vau1"]))
 A2 <- as.vector(z2mvnorm(rnorm(N),ev,truevals["vau2"]))
 A3 <- as.vector(z2mvnorm(rnorm(N),ev,truevals["vau3"]))
 A4 <- as.vector(z2mvnorm(rnorm(N),ev,truevals["vau4"]))
+
 rm(ev); gc()
+
 Ec <- rnorm(N)
 E1 <- rnorm(N,sd=sqrt(truevals["veu1"]))
 E2 <- rnorm(N,sd=sqrt(truevals["veu2"]))
@@ -153,26 +159,13 @@ for(i in 1:4){
 
 # Begin assembling mxGREML independent-pathway model: #########
 
-#This is the MxExpectationGREML object.  The value of argument 'Xvars' is telling OpenMx to regress all five phenotypes onto both covariates:
+#This is the MxExpectationGREML object.  The value of argument 'Xvars' is telling OpenMx to regress all four phenotypes onto both covariates:
 xpec <- mxExpectationGREML(V="V",yvars=c("y1","y2","y3","y4"),Xvars=list(c("x1","x2")),blockByPheno=T)
 
-#Custom compute plan:
-plan <- mxComputeSequence(
-	steps=list(
-		mxComputeNewtonRaphson(verbose=5L),
-		#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
-		mxComputeOnce("fitfunction", c("gradient","hessian")),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 
 ipmod <- mxModel(
 	"IndePathway",
 	xpec,
-	plan,
 	#sort=FALSE is CRITICALLY IMPORTANT!  It turns off OpenMx's automatic sorting of data rows.
 	#We don't want to rearrange the rows, because they are already aligned with the rows and columns of the GRM:
 	mxData(observed=widedata,type="raw",sort=FALSE),
@@ -319,25 +312,13 @@ ipmod <- mxModel(
 )
 rm(GRM); gc()
 
+#`mxAutoStart()` happens to be VERY helpful toward optimizing this demo script's model!:
+ipmod_as <- mxAutoStart(ipmod)
+ipmod <- omxSetParameters(ipmod,labels=names(coef(ipmod_as)),values=coef(ipmod_as))
+rm(ipmod_as); gc()
 #Clobbering the unfitted MxModel with the fitted MxModel object will NOT reduce peak memory demand, but it will allow R to free more memory
 #after the call to mxRun() is complete:
 ipmod <- mxRun(ipmod)
-
-if(ipmod$output$status$code > 1){
-	mxOption(NULL,"Analytic Gradients","No")
-	ipmod$compute <- mxComputeSequence(
-		steps=list(
-			mxComputeGradientDescent(engine="SLSQP", verbose=5L),
-			#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
-			mxComputeNumericDeriv(),
-			mxComputeStandardError(),
-			mxComputeHessianQuality(),
-			mxComputeReportDeriv(),
-			mxComputeReportExpectation()
-		))
-	ipmod <- mxRun(ipmod)
-}
-
 
 object.size(ipmod) #<--How much memory does the fitted MxModel take up?:
 summary(ipmod,verbose=T)

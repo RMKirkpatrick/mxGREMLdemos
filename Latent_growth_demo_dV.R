@@ -9,6 +9,7 @@ library(Matrix)
 library(OpenMx)
 library(lme4)
 options(mxCondenseMatrixSlots=TRUE)
+mxOption(NULL,"Default optimizer","CSOLNP")
 set.seed(210930)
 
 #With more threads, the job will run more quickly, but will require more memory:
@@ -45,15 +46,18 @@ for(mi in 1:msnps){
 	#print(mi)
 }
 GRM <- snps%*%t(snps) / msnps #<--#Calculate GRM from SNPs.
-ev <- eigen(GRM,symmetric=T) #<--Eigen-decompose the GRM.
 
-#If you don't care whether or not the GRM is positive-definite, you can comment out this part.  It "bends" the GRM to the nearest 
-#(in a least-squares sense) positive-definite matrix:
-if(!all(ev$values > .Machine$double.eps)){
-	GRM <- as.matrix(nearPD(GRM)$mat)
+#If you don't care whether or not the GRM is positive-definite, you can change the `if(1)` below to `if(0)`.
+#The part inside the curly braces "bends" the GRM to the nearest (in a least-squares sense) positive-definite matrix:
+if(1){
+	ev <- eigen(GRM,symmetric=T,only.values=T) #<--Eigen-decompose the GRM.
+	if(!all(ev$values > .Machine$double.eps)){
+		GRM <- as.matrix(nearPD(GRM)$mat)
+	}
+	rm(ev)
 }
 
-rm(snps,ev); gc()
+rm(snps); gc()
 
 #Age (the time metric), centered at expected wave-3 age:
 age1 <- round(9 + runif(N,-0.25,0.25) - 13, 2)
@@ -116,6 +120,7 @@ xpec <- mxExpectationGREML(
 	staggerZeroes=FALSE)
 
 # #Options for verifying analytic derivatives with NPSOL:
+# mxOption(NULL,"Default optimizer","CSOLNP")
 # mxOption(NULL,"Print level",20)
 # mxOption(NULL,"Print file",1)
 # mxOption(NULL,"Verify level",3)
@@ -355,10 +360,10 @@ gremlmod <- mxRun(gremlmod)
 gc()
 object.size(gremlmod) #<--How much memory does the fitted MxModel take up?:
 
-#If Newton-Raphson doesn't reach a good solution, try again with SLSQP:
+#If Newton-Raphson doesn't reach a good solution, try again with CSOLNP:
 if( !(gremlmod$output$status$code %in% c(0,1)) ){
 	gremlmod$compute <- mxComputeSequence(steps=list(
-		mxComputeGradientDescent(engine="SLSQP",verbose=5L),
+		mxComputeGradientDescent(engine="CSOLNP",verbose=5L),
 		#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
 		mxComputeOnce('fitfunction', c('gradient','hessian')),
 		mxComputeStandardError(),

@@ -7,6 +7,9 @@
 
 require(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)  #<--Saves memory
+#With mxGREML, only SLSQP knows how to parallelize numeric fitfunction derivatives, so that's
+#what we'll use, so that numeric derivatives are not artificially slowed-down compared to
+#(semi-)analytic derivatives:
 mxOption(NULL,"Default optimizer","SLSQP")
 #More threads means faster running time, but at the cost of higher memory demand:
 mxOption(NULL,"Number of threads",2)
@@ -178,7 +181,8 @@ semiAnalytMod <- mxModel(
 	mxAlgebra( Lambda%*%t(Lambda), name="LamLamT"),
 	#The model-expected covariance matrix, per the Fundamental Theorem of Factor Analysis:
 	mxAlgebra(LamLamT%x%SigmaFac + vec2diag(Vu), name="V"),
-	mxFitFunctionGREML(autoDerivType="semiAnalyt")
+	#Model-expected covariance matrix is not linear in the free parameters, so use `infoMatType="expected"`:
+	mxFitFunctionGREML(autoDerivType="semiAnalyt",infoMatType="expected")
 )
 
 semiAnalytRun <- mxRun(semiAnalytMod)
@@ -274,7 +278,8 @@ analyticMod <- mxModel(
 		name="dLamLamT_dl3"),
 	#First partial derivative of V w/r/t l3:
 	mxAlgebra(dLamLamT_dl3%x%SigmaFac, name="dV_dl3"),
-	mxFitFunctionGREML(dV=c(l1="dV_dl1",l2="dV_dl2",l3="dV_dl3",va="dV_dva",vu1="dV_dvu1",vu2="dV_dvu2",vu3="dV_dvu3"))
+	#Model-expected covariance matrix is not linear in the free parameters, so use `infoMatType="expected"`:
+	mxFitFunctionGREML(dV=c(l1="dV_dl1",l2="dV_dl2",l3="dV_dl3",va="dV_dva",vu1="dV_dvu1",vu2="dV_dvu2",vu3="dV_dvu3"),infoMatType="expected")
 )
 analyticRun <- mxRun(analyticMod)
 summary(analyticRun)

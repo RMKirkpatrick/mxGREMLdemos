@@ -3,6 +3,7 @@
 
 # This script demonstrates a GREML analysis of 2 ordinal phenotypes (3 levels each).
 # The model is parameterized in terms of the traits' observed-scale variance-covariance components.
+# NOTICE: This is probably the slowest-running script in the repository!
 
 library(mvtnorm)
 library(Matrix)
@@ -55,15 +56,18 @@ for(mi in 1:msnps){
 	#print(mi)
 }
 GRM <- snps%*%t(snps) / msnps #<--#Calculate GRM from SNPs.
-ev <- eigen(GRM,symmetric=T) #<--Eigen-decompose the GRM.
 
-#If you don't care whether or not the GRM is positive-definite, you can comment out this part.  It "bends" the GRM to the nearest 
-#(in a least-squares sense) positive-definite matrix:
-if(!all(ev$values > .Machine$double.eps)){
-	GRM <- as.matrix(nearPD(GRM)$mat)
+#If you don't care whether or not the GRM is positive-definite, you can change the `if(1)` below to `if(0)`.
+#The part inside the curly braces "bends" the GRM to the nearest (in a least-squares sense) positive-definite matrix:
+if(1){
+	ev <- eigen(GRM,symmetric=T,only.values=T) #<--Eigen-decompose the GRM.
+	if(!all(ev$values > .Machine$double.eps)){
+		GRM <- as.matrix(nearPD(GRM)$mat)
+	}
+	rm(ev)
 }
-#Free some memory:
-rm(snps, ev); gc()
+
+rm(snps); gc()
 
 #Covariance matrix for genetic liabilities:
 varglat <- rbind(
@@ -159,6 +163,7 @@ gremldat <- mxGREMLDataHandler(data=widedata,yvars=c("y1","y2"),blockByPheno=TRU
 head(gremldat$yX)
 
 #Options for verifying analytic derivatives with NPSOL:
+# mxOption(NULL,"Default optimizer","NPSOL")
 # mxOption(NULL,"Print level",20)
 # mxOption(NULL,"Print file",1)
 # mxOption(NULL,"Verify level",3)
@@ -170,11 +175,11 @@ gremlmod <- mxModel(
 	#Custom compute plan:
 	mxComputeSequence(
 		steps=list(
-			#mxComputeGradientDescent(engine="NPSOL",verbose=5L),
 			mxComputeNewtonRaphson(verbose=5L),
 			mxComputeOnce("fitfunction", c("gradient","hessian")),
 			mxComputeConfidenceInterval(
-				plan=mxComputeGradientDescent(engine="SLSQP"),
+				#`engine="SLSQP"` plus `constraintType="ineq"` is theoretically the best algorithm OpenMx has for calculating confidence intervals:
+				plan=mxComputeGradientDescent(engine="SLSQP",verbose=5L),
 				constraintType="ineq", verbose=5L
 					),
 			mxComputeStandardError(),
@@ -182,7 +187,7 @@ gremlmod <- mxModel(
 			mxComputeReportDeriv(),
 			mxComputeReportExpectation()
 		)),
-	#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' arguments in the above.
+	#^^^Note:  If you are running the R GUI under Windows, delete the `verbose=5L` arguments in the above.
 	mxData(observed=gremldat$yX, type="raw", sort=F),
 	
 	#Trait 1's observed-scale additive-genetic variance:
@@ -275,10 +280,14 @@ gremlmod <- mxModel(
 )
 rm(gremldat, GRM, widedata); gc()
 gremlmod <- mxRun(gremlmod)
+#^^^Confidence intervals for GREML models take a long time to calculate...
+#This script is demonstrating why we don't calculate CIs very often for GREML models...
 gc()
 summary(gremlmod, verbose=T)
-mxEval(y1_h2obs, gremlmod)
-mxEval(y2_h2obs, gremlmod)
-mxEval(y1_h2lat, gremlmod)
-mxEval(y2_h2lat, gremlmod)
-mxEval(ra, gremlmod)
+gremlmod$compute@steps[[3]]@output #<--'CI details' table.
+#Algebras and their standard errors:
+mxEval(y1_h2obs, gremlmod); mxSE(y1_h2obs, gremlmod)
+mxEval(y2_h2obs, gremlmod); mxSE(y2_h2obs, gremlmod)
+mxEval(y1_h2lat, gremlmod); mxSE(y1_h2lat, gremlmod)
+mxEval(y2_h2lat, gremlmod); mxSE(y2_h2lat, gremlmod)
+mxEval(ra, gremlmod); mxSE(ra, gremlmod)

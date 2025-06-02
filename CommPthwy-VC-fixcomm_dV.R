@@ -9,12 +9,13 @@ library(mvtnorm)
 library(Matrix)
 library(OpenMx)
 options(mxCondenseMatrixSlots=TRUE)
-mxOption(NULL,"Default optimizer","NPSOL")
+mxOption(NULL,"Default optimizer","CSOLNP")
 mxOption(NULL,"Analytic Gradients","Yes")
 
 #With more threads, the job will run more quickly, but will require more memory:
 mxOption(NULL,"Number of Threads",2)
 
+# mxOption(NULL,"Default optimizer","NPSOL")
 #The next two options together tell NPSOL to write a log entry for each of its major iterations to a file in   
 #the working directory, called 'fort.1' (change the value of "Print file" option to a different positive integer to change the extension 
 #to 'fort'):
@@ -70,11 +71,14 @@ for(mi in 1:msnps){
 GRM <- snps%*%t(snps) / msnps #<--#Calculate GRM from SNPs.
 ev <- eigen(GRM,symmetric=T) #<--Eigen-decompose the GRM.
 
-#If you don't care whether or not the GRM is positive-definite, you can comment out this part.  It "bends" the GRM to the nearest 
-#(in a least-squares sense) positive-definite matrix, and then eigen-decomposes it again:
-if(!all(ev$values > .Machine$double.eps)){
-	GRM <- as.matrix(nearPD(GRM)$mat)
-	ev <- eigen(GRM,symmetric=T)
+#If you don't care whether or not the GRM is positive-definite, you can change the `if(1)` below to `if(0)`.
+#`nearPD()` "bends" the GRM to the nearest (in a least-squares sense) positive-definite matrix; then, the GRM
+#is eigen-decomposed again:
+if(1){
+	if(!all(ev$values > .Machine$double.eps)){
+		GRM <- as.matrix(nearPD(GRM)$mat)
+		ev <- eigen(GRM,symmetric=T)
+	}
 }
 
 rm(snps); gc() 
@@ -155,27 +159,10 @@ xpec <- mxExpectationGREML(V="V",yvars=c("y1","y2","y3","y4","y5"),Xvars=list(c(
 #As an example, the following would regress y1 and y2 onto x1 and x2, regress y3 onto x1, regress y4 onto x2, and include no covariates for y5:
 # xpec <- mxExpectationGREML(V="V",yvars=c("y1","y2","y3","y4","y5"),Xvars=list(c("x1","x2"),c("x1","x2"),"x1","x2",character(0)))
 
-#Custom compute plan to use NPSOL, with analytic gradients but no warm start:
-plan <- mxComputeSequence(
-	steps=list(
-		mxComputeGradientDescent(engine="NPSOL",verbose=5L),
-		#^^^Note:  If you are running the R GUI under Windows, delete the 'verbose=5L' argument in the above.
-		mxComputeOnce("fitfunction", c("gradient","hessian")),
-		mxComputeStandardError(),
-		mxComputeHessianQuality(),
-		mxComputeReportDeriv(),
-		mxComputeReportExpectation()
-	))
-#^^^On the IBG laptops at the 2020 Boulder Workshop, I ran this script with NPSOL and with
-#the number of threads set to 4.  NPSOL appeared to enter a closed loop in which it repeatedly
-#got a non-finite fitfunction value.  If that's the case for you, use SLSQP instead, or try 
-#uncommenting the following line:
-# mxOption(NULL,"Function precision",1e-7)
 
 cpmod <- mxModel(
 	"CommonPathway",
 	xpec,
-	plan,
 	#sort=FALSE is CRITICALLY IMPORTANT!  It turns off OpenMx's automatic sorting of data rows.
 	#We don't want to rearrange the rows, because they are already aligned with the rows and columns of the GRM:
 	mxData(observed=widedata,type="raw",sort=FALSE),
@@ -332,7 +319,7 @@ cpmod <- mxModel(
 	mxFitFunctionGREML(
 		dV=c(vac="dV_dvac",l1="dV_dl1",l2="dV_dl2",l3="dV_dl3",l4="dV_dl4",l5="dV_dl5",
 				 va1="dV_dva1",va2="dV_dva2",va3="dV_dva3",va4="dV_dva4",va5="dV_dva5",
-				 ve1="dV_dve1",ve2="dV_dve2",ve3="dV_dve3",ve4="dV_dve4",ve5="dV_dve5"))
+				 ve1="dV_dve1",ve2="dV_dve2",ve3="dV_dve3",ve4="dV_dve4",ve5="dV_dve5"),infoMatType="expected")
 )
 rm(GRM); gc()
 
