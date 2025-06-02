@@ -1,4 +1,4 @@
-# Copyright 2019-2022 by Robert M. Kirkpatrick
+# Copyright 2019-2025 by Robert M. Kirkpatrick
 # Licensed under CC BY 4.0 <http://creativecommons.org/licenses/by/4.0/>
 
 # IMPORTANT!  This script is meant to be run under a Unix-like operating system (e.g., Linux/GNU, macOS, Solaris).

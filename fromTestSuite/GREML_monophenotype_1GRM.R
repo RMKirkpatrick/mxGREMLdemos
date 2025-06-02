@@ -1,7 +1,8 @@
-# Copyright 2019-2022 by Robert M. Kirkpatrick
+# Copyright 2019-2025 by Robert M. Kirkpatrick
 # Licensed under CC BY 4.0 <http://creativecommons.org/licenses/by/4.0/>
 
 #This script is adapted from inst/models/nightly/GREML_monophenotype_1GRM.R in the OpenMx source repository.
+
 #This script demonstrates the use of the GREML feature in a simple but semi-realistic example.
 #It first simulates a genomic-relatedness matrix (GRM), a phenotype, and a null covariate.  Then, it
 #fits a simple GREML model to estimate additive-genetic variance, residual variance, and heritability.
