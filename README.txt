@@ -1,4 +1,4 @@
-Copyright 2019-2022 by Robert M. Kirkpatrick
+Copyright 2019-2025 by Robert M. Kirkpatrick
 Licensed under CC BY 4.0 <http://creativecommons.org/licenses/by/4.0/>
 
 This repository is a collection of R scripts that demonstrate use of the 
