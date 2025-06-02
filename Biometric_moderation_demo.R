@@ -53,14 +53,14 @@ rm(snps, ev); gc()
 
 #Simulate data:
 m <- runif(n=N)
-Lambda <- outer(m,m)
-LambdaGRM <- Lambda * GRM
-Gamma <- matrix(NA_real_,N,N)
+Gamma <- outer(m,m)
+GammaGRM <- Gamma * GRM
+Lambda <- matrix(NA_real_,N,N)
 for(i in 1:N){
-	Gamma[i,] <- m[i]
+	Lambda[i,] <- m[i]
 }
-Gamma <- Gamma + t(Gamma)
-GammaGRM <- Gamma*GRM
+Lambda <- Lambda + t(Lambda)
+LambdaGRM <- Lambda*GRM
 K1 <- diag(2*m)
 K2 <- diag(m^2)
 V <- (truevals["a0"]^2)*GRM + truevals["a0"]*truevals["a1"]*LambdaGRM + (truevals["a1"]^2)*GammaGRM + diag(rep(truevals["e0"]^2,N)) + 
