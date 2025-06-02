@@ -507,7 +507,7 @@ cholMod <- mxModel(
 )
 cholRun <- mxRun(cholMod)
 #^^^Newton-Raphson didn't converge.  Notice that covariance matrix 'V' is no longer linear in the
-#free parameters, as it was for the previous 2 MxModels.
+#free parameters, as it was for the previous, direct-symmetric MxModel.
 
 if(cholRun$output$status$code > 1){
 	cholRun$compute <- mxComputeSequence(
