@@ -12,7 +12,7 @@ options(mxCondenseMatrixSlots=TRUE)
 set.seed(476) 
 
 #With more threads, the job will run more quickly, but will require more memory:
-mxOption(NULL,"Number of Threads",7)
+mxOption(NULL,"Number of Threads",2)
 #mxOption(NULL,"Nudge zero starts","No")
 mxOption(NULL,"Default optimizer","CSOLNP")
 
