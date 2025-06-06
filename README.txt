@@ -42,7 +42,14 @@ derivatives of 'V' are constant with respect to the free parameters.  If that
 condition is not met, then `infoMatType="expected"` is recommended because it 
 will be more accurate (though if time is of the essence, 
 `infoMatType="average"` will be faster, and may be "accurate enough" for some 
-users).
+purposes).
+* `mxAutoStart()`:  Although users are advised to calculate starting values
+from data whenever possible, `mxAutoStart()` can be very helpful for finding 
+good starting values for mxGREML models that use an "implicit" (i.e., 
+"specified in terms of covariates via argument `Xvars`") model for the 
+phenotypic mean.  In contrast, `mxAutoStart()` is not generally recommended for
+GREML models that use an "explicit" (i.e., "specified in terms of an MxMatrix 
+or MxAlgebra via argument `yhat`") model for the phenotypic mean.
 * Newton-Raphson (N-R):  In cases where N-R works well, it is very fast and very
 accurate.  N-R should generally be the optimizer of first choice when the
 model-expected covariance matrix 'V' is linear in the free parameters,
@@ -68,7 +75,7 @@ mxGREML model "too early" (i.e., when it has not reached a local minimum), but
 neither it nor OpenMx's interface to it detects this optimization failure.
 Unless and until this potential bug is resolved, CSOLNP (q.v.) is recommended 
 over SLSQP for most mxGREML use.  However, there are at least 3 particular
-circumstances where SLSQP is justifiably be preferred over CSOLNP: 
+circumstances where SLSQP is justifiably preferred over CSOLNP: 
 (1) optimization of profile-likelihood confidence intervals (i.e., calls to
 `mxCI()`), (2) optmization involving MxConstraints, and (3) optimization using 
 only numeric derivatives (which is slow, and not generally advised).
